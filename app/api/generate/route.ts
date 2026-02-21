@@ -38,9 +38,11 @@ Guidelines:
 - Always include exactly 2 alternatives`;
 
 export async function POST(req: NextRequest) {
-  try {
-    const { task, context, output, preferences, role } = await req.json();
+  // Parse body once upfront so it's available in both try and catch
+  const body = await req.json();
+  const { task, context, output, preferences, role } = body;
 
+  try {
     if (!task) {
       return NextResponse.json({ error: "Task is required" }, { status: 400 });
     }
@@ -48,15 +50,7 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey || apiKey === "your-api-key-here") {
-      // Fallback: generate a simple structured prompt without API
-      const fallbackPrompt = generateFallbackPrompt({
-        task,
-        context,
-        output,
-        preferences,
-        role,
-      });
-      return NextResponse.json(fallbackPrompt);
+      return NextResponse.json(generateFallbackPrompt(body));
     }
 
     const client = new Anthropic({ apiKey });
@@ -79,7 +73,13 @@ export async function POST(req: NextRequest) {
       throw new Error("No text in response");
     }
 
-    const parsed = JSON.parse(textBlock.text);
+    // Parse JSON - handle possible markdown code fences
+    let jsonText = textBlock.text.trim();
+    if (jsonText.startsWith("```")) {
+      jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    const parsed = JSON.parse(jsonText);
 
     return NextResponse.json({
       prompt: parsed.prompt,
@@ -89,11 +89,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Generate error:", error);
-
-    // Return fallback on any error
-    const body = await req.clone().json().catch(() => ({}));
-    const fallback = generateFallbackPrompt(body);
-    return NextResponse.json(fallback);
+    return NextResponse.json(generateFallbackPrompt(body));
   }
 }
 

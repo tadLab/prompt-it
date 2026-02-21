@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
@@ -19,7 +19,7 @@ export default function ResultPage() {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
-  const [saved, setSaved] = useState(false);
+  const hasSaved = useRef(false);
 
   useEffect(() => {
     const r = getPromptResult();
@@ -30,18 +30,18 @@ export default function ResultPage() {
     setResult(r);
     setEditedPrompt(r.prompt);
 
-    // Save to history
-    if (!saved) {
+    // Save to history only once using ref (immune to re-renders)
+    if (!hasSaved.current) {
+      hasSaved.current = true;
       const inputs = getWizardInputs();
       addEntry({
         inputs,
         result: r,
       });
-      setSaved(true);
-      // Notify history count listeners
       window.dispatchEvent(new Event("history-updated"));
     }
-  }, [router, addEntry, saved]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCopy = async () => {
     if (!result) return;

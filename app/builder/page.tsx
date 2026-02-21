@@ -111,21 +111,26 @@ export default function BuilderPage() {
       <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
         <div className="w-full max-w-xl mx-auto">
           {/* Step header */}
-          <div className="text-center mb-6 relative">
-            {step > 0 && (
-              <button
-                onClick={goBack}
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors"
-              >
-                ←
-              </button>
-            )}
+          <div className="text-center mb-6">
             <p className="text-emerald-400 text-xs font-medium tracking-widest mb-2">
               PROGRESS: STEP {step + 1} OF {STEPS.length}
             </p>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-              {current.title}
-            </h1>
+            <div className="flex items-center gap-4">
+              {step > 0 ? (
+                <button
+                  onClick={goBack}
+                  className="shrink-0 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors"
+                >
+                  ←
+                </button>
+              ) : (
+                <div className="w-10 shrink-0" />
+              )}
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex-1">
+                {current.title}
+              </h1>
+              <div className="w-10 shrink-0" />
+            </div>
           </div>
 
           {/* Textarea */}
