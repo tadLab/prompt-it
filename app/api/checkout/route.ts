@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     mode: "payment",
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${appUrl}/builder?payment=success`,
-    cancel_url: `${appUrl}/pricing?payment=cancelled`,
+    cancel_url: `${appUrl}/?payment=cancelled#pricing`,
     metadata: {
       supabase_user_id: user.id,
       coin_amount: String(pack.coins),
