@@ -15,6 +15,7 @@ export interface PromptResult {
   recommendedModel: string;
   whyThisModel: string;
   alternatives: string[];
+  generationId?: string;  // Added for rating system
 }
 
 const SESSION_KEY = "prompt-it-wizard";

@@ -145,10 +145,14 @@ export async function POST(req: NextRequest) {
     const parsed = JSON.parse(jsonText);
 
     // Log the generation
-    await serviceClient.from("generations").insert({
-      user_id: user?.id || null,
-      anonymous_id: user ? null : anonymousId,
-    });
+    const { data: generation } = await serviceClient
+      .from("generations")
+      .insert({
+        user_id: user?.id || null,
+        anonymous_id: user ? null : anonymousId,
+      })
+      .select("id")
+      .single();
 
     // Deduct 1 coin for authenticated users
     let remainingCoins = userCoins;
@@ -166,6 +170,7 @@ export async function POST(req: NextRequest) {
       whyThisModel: parsed.whyThisModel,
       alternatives: parsed.alternatives,
       remainingCoins,
+      generationId: generation?.id,
     });
   } catch (error) {
     console.error("Generate error:", error);
