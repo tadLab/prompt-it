@@ -13,13 +13,20 @@ export default function Footer() {
           Tade
         </Link>
       </div>
-      <Link
-        href="https://tadeasn.com"
-        target="_blank"
-        className="text-sm text-white/40 hover:text-white/60 transition-colors"
-      >
-        tadeasn.com
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/terms"
+          className="text-sm text-white/40 hover:text-white/60 transition-colors"
+        >
+          Terms
+        </Link>
+        <Link
+          href="/privacy"
+          className="text-sm text-white/40 hover:text-white/60 transition-colors"
+        >
+          Privacy
+        </Link>
+      </div>
     </footer>
   );
 }
