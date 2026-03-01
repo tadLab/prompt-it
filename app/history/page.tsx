@@ -66,6 +66,7 @@ function HistoryCard({
       <div className="flex items-center gap-2 mt-3">
         <button
           onClick={() => setExpanded(!expanded)}
+          aria-label={expanded ? "Collapse prompt" : "View prompt"}
           className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
         >
           {expanded ? "Collapse" : "View prompt"}
@@ -73,6 +74,7 @@ function HistoryCard({
         <span className="text-white/10">|</span>
         <button
           onClick={handleCopy}
+          aria-label="Copy prompt"
           className="text-xs text-white/40 hover:text-white/60 transition-colors"
         >
           {copied ? "Copied!" : "Copy"}
@@ -80,6 +82,7 @@ function HistoryCard({
         <span className="text-white/10">|</span>
         <button
           onClick={() => onDelete(entry.id)}
+          aria-label="Delete prompt"
           className="text-xs text-red-400/60 hover:text-red-400 transition-colors"
         >
           Delete

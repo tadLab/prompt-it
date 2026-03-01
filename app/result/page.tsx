@@ -105,10 +105,10 @@ export default function ResultPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-3 mb-10">
-            <button onClick={handleCopy} className="btn-primary text-sm">
+            <button onClick={handleCopy} aria-label="Copy prompt to clipboard" className="btn-primary text-sm">
               {copied ? "Copied!" : "Copy"}
             </button>
-            <button onClick={handleEdit} className="btn-secondary text-sm">
+            <button onClick={handleEdit} aria-label={isEditing ? "Finish editing" : "Edit prompt"} className="btn-secondary text-sm">
               {isEditing ? "Done" : "Edit"}
             </button>
             <Link href="/" className="btn-ghost text-sm">
