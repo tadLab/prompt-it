@@ -28,6 +28,22 @@ export default function Home() {
               See example
             </Link>
           </div>
+          {/* How it works */}
+          <div className="grid grid-cols-3 gap-6 mt-16 mb-8 max-w-lg mx-auto">
+            {[
+              { step: "1", label: "Describe", desc: "Tell us what you need" },
+              { step: "2", label: "Generate", desc: "AI builds your prompt" },
+              { step: "3", label: "Use", desc: "Copy & paste into any AI" },
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div className="w-10 h-10 rounded-full bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-2 text-emerald-400 text-sm font-bold">
+                  {item.step}
+                </div>
+                <p className="text-sm font-medium">{item.label}</p>
+                <p className="text-white/40 text-xs">{item.desc}</p>
+              </div>
+            ))}
+          </div>
           <p className="text-white/30 text-sm">
             Works with ChatGPT, Claude, Gemini and other AI models
           </p>
