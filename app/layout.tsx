@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import CursorGlow from "./components/CursorGlow";
 import { AuthProvider } from "./components/AuthProvider";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 const geist = Geist({
@@ -40,6 +41,7 @@ export default function RootLayout({
         <AuthProvider>
           <CursorGlow />
           {children}
+          <Analytics />
         </AuthProvider>
       </body>
     </html>
