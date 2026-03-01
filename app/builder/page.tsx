@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, KeyboardEvent } from "react";
+import { useState, useEffect, useCallback, KeyboardEvent, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useHistoryCount } from "../hooks/useHistory";
 import { saveWizardInputs, getWizardInputs, type WizardInputs } from "../hooks/usePromptStore";
 import Footer from "../components/Footer";
+import Toast, { usePaymentToast } from "../components/Toast";
 
 const STEPS = [
   {
@@ -36,6 +37,12 @@ const STEPS = [
     placeholder: "As an expert, As a teacher, As a consultant, suprise me...",
   },
 ];
+
+function PaymentToast() {
+  const toast = usePaymentToast();
+  if (!toast) return null;
+  return <Toast message={toast.message} type={toast.type} />;
+}
 
 export default function BuilderPage() {
   const router = useRouter();
@@ -82,6 +89,14 @@ export default function BuilderPage() {
 
   return (
     <div className="bg-gradient-main flex flex-col min-h-screen">
+      {/* Progress bar */}
+      <div className="fixed top-0 left-0 right-0 h-1 bg-white/5 z-50">
+        <div
+          className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500 ease-out"
+          style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+        />
+      </div>
+
       {/* Builder header */}
       <header className="px-6 py-4 flex items-center justify-between">
         <Link
@@ -109,7 +124,7 @@ export default function BuilderPage() {
 
       {/* Wizard content */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-        <div className="w-full max-w-xl mx-auto">
+        <div key={step} className="w-full max-w-xl mx-auto fade-in">
           {/* Step header */}
           <div className="text-center mb-6">
             <p className="text-emerald-400 text-xs font-medium tracking-widest mb-2">
@@ -119,6 +134,7 @@ export default function BuilderPage() {
               {step > 0 ? (
                 <button
                   onClick={goBack}
+                  aria-label="Go to previous step"
                   className="shrink-0 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:border-white/40 transition-colors"
                 >
                   ←
@@ -163,6 +179,9 @@ export default function BuilderPage() {
         </div>
       </main>
 
+      <Suspense>
+        <PaymentToast />
+      </Suspense>
       <Footer />
     </div>
   );

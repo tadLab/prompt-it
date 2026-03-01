@@ -5,15 +5,20 @@ import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { getWizardInputs, savePromptResult } from "../hooks/usePromptStore";
+import { useUser } from "../hooks/useUser";
 
 const CHECKLIST_ITEMS = ["TASK", "CONTEXT", "OUTPUT", "PREFERENCES", "ROLE"];
 
 export default function LoadingPromptPage() {
   const router = useRouter();
+  const { user, hasCoins, isLoading: authLoading } = useUser();
   const [checkedItems, setCheckedItems] = useState<number[]>([]);
+  const [error, setError] = useState(false);
   const hasStarted = useRef(false);
 
   useEffect(() => {
+    // Wait for auth state to resolve before checking
+    if (authLoading) return;
     if (hasStarted.current) return;
     hasStarted.current = true;
 
@@ -22,6 +27,20 @@ export default function LoadingPromptPage() {
     // If no inputs, redirect back to builder
     if (!inputs.task) {
       router.replace("/builder");
+      return;
+    }
+
+    // Client-side paywall gate
+    const freeUsed =
+      localStorage.getItem("prompt-it-free-used") === "true";
+
+    if (freeUsed && !user) {
+      router.replace("/login?redirect=/loading-prompt");
+      return;
+    }
+
+    if (freeUsed && user && !hasCoins) {
+      router.replace("/pricing");
       return;
     }
 
@@ -41,10 +60,25 @@ export default function LoadingPromptPage() {
           body: JSON.stringify(inputs),
         });
 
-        if (!res.ok) throw new Error("Failed to generate prompt");
+        // Handle auth/payment error codes from server
+        if (!res.ok) {
+          const errorData = await res.json();
+          if (errorData.code === "AUTH_REQUIRED") {
+            router.replace("/login?redirect=/loading-prompt");
+            return;
+          }
+          if (errorData.code === "PAYMENT_REQUIRED") {
+            router.replace("/pricing");
+            return;
+          }
+          throw new Error("Failed to generate prompt");
+        }
 
         const data = await res.json();
         savePromptResult(data);
+
+        // Mark free prompt as used
+        localStorage.setItem("prompt-it-free-used", "true");
 
         // Wait for checklist animation to finish, then navigate
         const minDelay = CHECKLIST_ITEMS.length * 400 + 800;
@@ -54,23 +88,16 @@ export default function LoadingPromptPage() {
         setTimeout(() => {
           router.push("/result");
         }, remaining);
-      } catch (error) {
-        console.error("Generation error:", error);
-        // On error, still navigate with a fallback
-        savePromptResult({
-          prompt: `### Role\n${inputs.role}\n\n### Goal\n${inputs.task}\n\n### Context\n${inputs.context}\n\n### Requirements\n${inputs.preferences}\n\n### Output Format\n${inputs.output}`,
-          recommendedModel: "Claude",
-          whyThisModel:
-            "Claude excels at following structured instructions and producing clean, readable outputs.",
-          alternatives: ["ChatGPT", "Gemini"],
-        });
-        setTimeout(() => router.push("/result"), 2000);
+      } catch (err) {
+        console.error("Generation error:", err);
+        setError(true);
       }
     };
 
     const start = Date.now();
     generatePrompt();
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading]);
 
   return (
     <div className="bg-gradient-main flex flex-col min-h-screen">
@@ -109,6 +136,15 @@ export default function LoadingPromptPage() {
             );
           })}
         </div>
+
+        {error && (
+          <div className="text-center mt-8 fade-in">
+            <p className="text-red-400 text-sm mb-4">Something went wrong generating your prompt.</p>
+            <button onClick={() => window.location.reload()} className="btn-secondary text-sm">
+              Try again
+            </button>
+          </div>
+        )}
       </main>
       <Footer />
     </div>

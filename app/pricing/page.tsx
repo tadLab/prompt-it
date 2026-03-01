@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useUser } from "../hooks/useUser";
+import Toast, { usePaymentToast } from "../components/Toast";
 
 const PACKS = [
   {
@@ -31,6 +32,12 @@ const PACKS = [
     perPrompt: "$0.075",
   },
 ];
+
+function PaymentToast() {
+  const toast = usePaymentToast();
+  if (!toast) return null;
+  return <Toast message={toast.message} type={toast.type} />;
+}
 
 export default function PricingPage() {
   const router = useRouter();
@@ -77,9 +84,13 @@ export default function PricingPage() {
             1 coin = 1 prompt. Buy once, use anytime.
           </p>
 
-          {isLoggedIn && !isLoading && (
+          {isLoggedIn && (
             <p className="text-center text-emerald-400 text-sm mb-8">
-              Your balance: {coins} coin{coins !== 1 ? "s" : ""}
+              {isLoading ? (
+                <span className="inline-block w-24 h-4 bg-emerald-400/20 rounded animate-pulse" />
+              ) : (
+                <>Your balance: {coins} coin{coins !== 1 ? "s" : ""}</>
+              )}
             </p>
           )}
           {!isLoggedIn && (
@@ -195,6 +206,9 @@ export default function PricingPage() {
           </div>
         </div>
       </main>
+      <Suspense>
+        <PaymentToast />
+      </Suspense>
       <Footer />
     </div>
   );
