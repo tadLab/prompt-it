@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { env } from "@/lib/env";
 import { createHash } from "crypto";
 
 const SYSTEM_PROMPT = `You are a prompt engineering assistant. Your job is to take a user's raw inputs and generate a high-quality, structured prompt that they can use with any AI model.
@@ -46,6 +47,19 @@ export async function POST(req: NextRequest) {
 
   if (!task) {
     return NextResponse.json({ error: "Task is required" }, { status: 400 });
+  }
+
+  // Input validation
+  const MAX_FIELD_LENGTH = 2000;
+  const fields = { task, context, output, preferences, role };
+
+  for (const [key, value] of Object.entries(fields)) {
+    if (typeof value === "string" && value.length > MAX_FIELD_LENGTH) {
+      return NextResponse.json(
+        { error: `${key} exceeds maximum length of ${MAX_FIELD_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
   }
 
   // --- AUTH & USAGE CHECK ---
@@ -100,13 +114,7 @@ export async function POST(req: NextRequest) {
 
   // --- GENERATE PROMPT ---
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-
-    if (!apiKey || apiKey === "your-api-key-here") {
-      return NextResponse.json(generateFallbackPrompt(body));
-    }
-
-    const client = new Anthropic({ apiKey });
+    const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
     const message = await client.messages.create({
       model: "claude-sonnet-4-20250514",
