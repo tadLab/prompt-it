@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createHash } from "crypto";
 
 const SYSTEM_PROMPT = `You are a prompt engineering assistant. Your job is to take a user's raw inputs and generate a high-quality, structured prompt that they can use with any AI model.
 
@@ -42,11 +44,62 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { task, context, output, preferences, role } = body;
 
-  try {
-    if (!task) {
-      return NextResponse.json({ error: "Task is required" }, { status: 400 });
-    }
+  if (!task) {
+    return NextResponse.json({ error: "Task is required" }, { status: 400 });
+  }
 
+  // --- AUTH & USAGE CHECK ---
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const serviceClient = createServiceClient();
+
+  // Generate anonymous ID from IP for free tier tracking
+  const ip =
+    req.headers.get("x-forwarded-for") ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+  const anonymousId = createHash("sha256")
+    .update(ip)
+    .digest("hex")
+    .slice(0, 16);
+
+  let userCoins = 0;
+
+  if (user) {
+    // Authenticated user — check coin balance
+    const { data: profile } = await serviceClient
+      .from("profiles")
+      .select("coins")
+      .eq("id", user.id)
+      .single();
+
+    userCoins = profile?.coins ?? 0;
+
+    if (userCoins <= 0) {
+      return NextResponse.json(
+        { error: "Payment required", code: "PAYMENT_REQUIRED" },
+        { status: 403 }
+      );
+    }
+  } else {
+    // Anonymous user — allow max 1 free generation per IP
+    const { count } = await serviceClient
+      .from("generations")
+      .select("*", { count: "exact", head: true })
+      .eq("anonymous_id", anonymousId);
+
+    if ((count ?? 0) >= 1) {
+      return NextResponse.json(
+        { error: "Sign up required", code: "AUTH_REQUIRED" },
+        { status: 401 }
+      );
+    }
+  }
+
+  // --- GENERATE PROMPT ---
+  try {
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey || apiKey === "your-api-key-here") {
@@ -76,16 +129,35 @@ export async function POST(req: NextRequest) {
     // Parse JSON - handle possible markdown code fences
     let jsonText = textBlock.text.trim();
     if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+      jsonText = jsonText
+        .replace(/^```(?:json)?\n?/, "")
+        .replace(/\n?```$/, "");
     }
 
     const parsed = JSON.parse(jsonText);
+
+    // Log the generation
+    await serviceClient.from("generations").insert({
+      user_id: user?.id || null,
+      anonymous_id: user ? null : anonymousId,
+    });
+
+    // Deduct 1 coin for authenticated users
+    let remainingCoins = userCoins;
+    if (user) {
+      const { data } = await serviceClient.rpc("increment_coins", {
+        user_id: user.id,
+        amount: -1,
+      });
+      remainingCoins = data ?? userCoins - 1;
+    }
 
     return NextResponse.json({
       prompt: parsed.prompt,
       recommendedModel: parsed.recommendedModel,
       whyThisModel: parsed.whyThisModel,
       alternatives: parsed.alternatives,
+      remainingCoins,
     });
   } catch (error) {
     console.error("Generate error:", error);
@@ -100,7 +172,13 @@ function generateFallbackPrompt(inputs: {
   preferences?: string;
   role?: string;
 }) {
-  const { task = "", context = "", output = "", preferences = "", role = "" } = inputs;
+  const {
+    task = "",
+    context = "",
+    output = "",
+    preferences = "",
+    role = "",
+  } = inputs;
 
   const prompt = `### Role
 ${role || "You are a helpful AI assistant."}
