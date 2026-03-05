@@ -16,27 +16,27 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-white/40 text-sm mb-8">
-            Last updated: March 1, 2026
+            Last updated: March 5, 2026
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">
             1. Information We Collect
           </h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
-            When you sign in with Google, we receive your email address and
-            basic profile information. We also collect usage data such as prompts
-            generated and ratings you provide. Payment information is processed
-            directly by Stripe — we do not store your card details on our
-            servers.
+            prompt it does not require an account or collect personal
+            information. We collect only the prompt inputs you provide during
+            generation, which are sent to our AI provider to generate your
+            prompt. Prompt history is stored locally in your browser.
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">
             2. How We Use Your Data
           </h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
-            We use your data to provide and operate the service, track your
-            usage, and improve the product. We do not sell your personal
-            information to third parties.
+            Your prompt inputs are sent to our AI provider solely to generate
+            your structured prompt. We do not store, sell, or share your
+            inputs with third parties beyond what is necessary to operate the
+            service.
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">
@@ -48,62 +48,37 @@ export default function PrivacyPage() {
           </p>
           <ul className="text-white/60 text-sm leading-relaxed mb-6 list-disc list-inside space-y-1">
             <li>
-              <strong>Firebase</strong> — database and authentication
-            </li>
-            <li>
               <strong>Anthropic</strong> — AI prompt generation
             </li>
             <li>
               <strong>Vercel</strong> — hosting and deployment
             </li>
-            <li>
-              <strong>Google</strong> — OAuth sign-in
-            </li>
           </ul>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">4. Cookies</h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
-            We use a minimal number of cookies. A session cookie is required
-            for the service to function and keep you signed in. We also use a
-            referral tracking cookie that expires after 30 days. We do not use
-            advertising or analytics cookies.
+            We use minimal cookies required for the service to function. We
+            do not use advertising or third-party analytics cookies.
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">
             5. Data Retention
           </h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
-            Your account data is kept for as long as your account exists. Prompt
-            history is stored so you can access it within the app. If you delete
-            your account, your data will be removed from our systems.
-          </p>
-
-          <h2 className="text-lg font-semibold mt-8 mb-3">6. Your Rights</h2>
-          <p className="text-white/60 text-sm leading-relaxed mb-6">
-            You have the right to request an export of your data, request
-            deletion of your account and associated data, or ask questions about
-            how your data is handled. To exercise any of these rights, contact
-            us at the email below.
-          </p>
-
-          <h2 className="text-lg font-semibold mt-8 mb-3">7. Security</h2>
-          <p className="text-white/60 text-sm leading-relaxed mb-6">
-            We use industry-standard security measures to protect your data,
-            including encrypted connections (HTTPS) and secure authentication
-            flows. However, no method of transmission over the internet is 100%
-            secure, and we cannot guarantee absolute security.
+            Your prompt history is stored only in your browser&apos;s local
+            storage. We do not retain prompt data on our servers after
+            generation is complete.
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">
-            8. Changes to This Policy
+            6. Changes to This Policy
           </h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
             We may update this Privacy Policy from time to time. Changes will be
-            posted on this page with an updated date. We encourage you to review
-            this policy periodically.
+            posted on this page with an updated date.
           </p>
 
-          <h2 className="text-lg font-semibold mt-8 mb-3">9. Contact</h2>
+          <h2 className="text-lg font-semibold mt-8 mb-3">7. Contact</h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
             If you have questions about this Privacy Policy, please reach out
             at{" "}

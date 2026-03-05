@@ -19,8 +19,6 @@ export default function ResultPage() {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
-  const [rated, setRated] = useState(false);
-  const [ratingLoading, setRatingLoading] = useState(false);
   const hasSaved = useRef(false);
 
   useEffect(() => {
@@ -32,7 +30,6 @@ export default function ResultPage() {
     setResult(r);
     setEditedPrompt(r.prompt);
 
-    // Save to history only once using ref (immune to re-renders)
     if (!hasSaved.current) {
       hasSaved.current = true;
       const inputs = getWizardInputs();
@@ -55,25 +52,6 @@ export default function ResultPage() {
 
   const handleEdit = () => {
     setIsEditing(!isEditing);
-  };
-
-  const handleRate = async (rating: "up" | "down") => {
-    if (!result?.generationId) return;
-    setRatingLoading(true);
-    try {
-      const res = await fetch("/api/rate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ generationId: result.generationId, rating }),
-      });
-      if (res.ok) {
-        setRated(true);
-      }
-    } catch {
-      // Silently fail — non-critical feature
-    } finally {
-      setRatingLoading(false);
-    }
   };
 
   if (!result) return null;
@@ -115,35 +93,6 @@ export default function ResultPage() {
               Home
             </Link>
           </div>
-
-          {/* Rating */}
-          {result.generationId && !rated && (
-            <div className="glass-card p-5 mb-10 text-center">
-              <p className="text-sm font-medium mb-3">How was this prompt?</p>
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={() => handleRate("up")}
-                  disabled={ratingLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-400/10 border border-emerald-400/20 hover:bg-emerald-400/20 transition-colors text-sm"
-                >
-                  <span>👍</span> Useful
-                </button>
-                <button
-                  onClick={() => handleRate("down")}
-                  disabled={ratingLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-sm"
-                >
-                  <span>👎</span> Not great
-                </button>
-              </div>
-              <p className="text-white/30 text-xs mt-2">Your feedback helps us improve</p>
-            </div>
-          )}
-          {rated && (
-            <div className="glass-card p-5 mb-10 text-center">
-              <p className="text-emerald-400 text-sm font-medium">Thanks for rating!</p>
-            </div>
-          )}
 
           {/* Recommendations */}
           <div>
