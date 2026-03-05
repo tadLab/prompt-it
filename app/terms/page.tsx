@@ -49,15 +49,11 @@ export default function TermsPage() {
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">
-            4. Payments & Coins
+            4. Usage Limits
           </h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
-            prompt it uses a coin-based system. Coins are purchased as one-time
-            payments via Stripe. Coins do not expire. Because coins are digital
-            goods delivered immediately upon purchase, all sales are final and
-            non-refundable. We offer three coin packs: 30 coins for $2.99, 80
-            coins for $6.99, and 200 coins for $14.99. Prices may change, but
-            any coins you have already purchased will remain in your account.
+            prompt it is free to use. Each account receives a limited number of
+            prompt generations. Usage limits may change at any time.
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">
@@ -95,8 +91,7 @@ export default function TermsPage() {
           <h2 className="text-lg font-semibold mt-8 mb-3">8. Termination</h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
             We may suspend or terminate your account if you violate these terms.
-            You may delete your account at any time by contacting us. Upon
-            termination, any remaining coins in your account will be forfeited.
+            You may delete your account at any time by contacting us.
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">

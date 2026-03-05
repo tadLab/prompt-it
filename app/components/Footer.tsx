@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="border-t border-white/5 px-6 py-4 flex items-center justify-between">
       <div className="text-sm text-white/40">
-        Made with ✨ by{" "}
+        Made by{" "}
         <Link
           href="https://tadeasn.com"
           target="_blank"

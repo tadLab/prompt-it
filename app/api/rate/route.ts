@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/firebase/server-auth";
+import { getAdminDb } from "@/lib/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(req: NextRequest) {
   const { generationId, rating } = await req.json();
@@ -8,39 +10,27 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const serviceClient = createServiceClient();
+  // Use compound doc ID for uniqueness
+  const ratingId = `${user.uid}_${generationId}`;
+  const ratingRef = getAdminDb().collection("ratings").doc(ratingId);
 
-  // Check if already rated
-  const { data: existing } = await serviceClient
-    .from("ratings")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("generation_id", generationId)
-    .single();
-
-  if (existing) {
+  const existing = await ratingRef.get();
+  if (existing.exists) {
     return NextResponse.json({ error: "Already rated", alreadyRated: true }, { status: 409 });
   }
 
-  // Insert rating
-  await serviceClient.from("ratings").insert({
-    user_id: user.id,
-    generation_id: generationId,
+  await ratingRef.set({
+    userId: user.uid,
+    generationId,
     rating,
+    createdAt: FieldValue.serverTimestamp(),
   });
 
-  // Credit +1 coin
-  const { data: newBalance } = await serviceClient.rpc("increment_coins", {
-    user_id: user.id,
-    amount: 1,
-  });
-
-  return NextResponse.json({ success: true, coins: newBalance });
+  return NextResponse.json({ success: true });
 }

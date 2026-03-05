@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, KeyboardEvent, Suspense } from "react";
+import { useState, useCallback, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useHistoryCount } from "../hooks/useHistory";
 import { saveWizardInputs, getWizardInputs, type WizardInputs } from "../hooks/usePromptStore";
 import Footer from "../components/Footer";
-import Toast, { usePaymentToast } from "../components/Toast";
 
 const STEPS = [
   {
@@ -34,15 +33,9 @@ const STEPS = [
   {
     key: "role" as const,
     title: "SKILL LEVEL / AI ROLE",
-    placeholder: "As an expert, As a teacher, As a consultant, suprise me...",
+    placeholder: "As an expert, As a teacher, As a consultant, surprise me...",
   },
 ];
-
-function PaymentToast() {
-  const toast = usePaymentToast();
-  if (!toast) return null;
-  return <Toast message={toast.message} type={toast.type} />;
-}
 
 export default function BuilderPage() {
   const router = useRouter();
@@ -179,9 +172,6 @@ export default function BuilderPage() {
         </div>
       </main>
 
-      <Suspense>
-        <PaymentToast />
-      </Suspense>
       <Footer />
     </div>
   );

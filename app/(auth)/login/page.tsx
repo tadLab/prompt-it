@@ -1,24 +1,43 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "../../components/AuthProvider";
+import { auth } from "@/lib/firebase/client";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 function LoginForm() {
-  const { supabase } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/builder";
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
-      },
-    });
+    setError("");
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+
+      // Create server-side session cookie
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to create session");
+      }
+
+      router.push(redirect);
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Sign in failed. Please try again.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -37,6 +56,10 @@ function LoginForm() {
         You&apos;ve used your free prompt. Sign in to unlock unlimited
         prompts.
       </p>
+
+      {error && (
+        <p className="text-red-400 text-sm mb-4">{error}</p>
+      )}
 
       <button
         onClick={handleGoogleLogin}
@@ -61,7 +84,7 @@ function LoginForm() {
             d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
           />
         </svg>
-        {loading ? "Redirecting..." : "Continue with Google"}
+        {loading ? "Signing in..." : "Continue with Google"}
       </button>
 
       <p className="text-white/30 text-xs mt-6">

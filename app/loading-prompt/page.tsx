@@ -11,7 +11,7 @@ const CHECKLIST_ITEMS = ["TASK", "CONTEXT", "OUTPUT", "PREFERENCES", "ROLE"];
 
 export default function LoadingPromptPage() {
   const router = useRouter();
-  const { user, hasCoins, isLoading: authLoading } = useUser();
+  const { user, hasPrompts, isLoading: authLoading } = useUser();
   const [checkedItems, setCheckedItems] = useState<number[]>([]);
   const [error, setError] = useState(false);
   const hasStarted = useRef(false);
@@ -39,8 +39,8 @@ export default function LoadingPromptPage() {
       return;
     }
 
-    if (freeUsed && user && !hasCoins) {
-      router.replace("/pricing");
+    if (freeUsed && user && !hasPrompts) {
+      router.replace("/builder");
       return;
     }
 
@@ -67,8 +67,8 @@ export default function LoadingPromptPage() {
             router.replace("/login?redirect=/loading-prompt");
             return;
           }
-          if (errorData.code === "PAYMENT_REQUIRED") {
-            router.replace("/pricing");
+          if (errorData.code === "LIMIT_REACHED") {
+            router.replace("/builder");
             return;
           }
           throw new Error("Failed to generate prompt");

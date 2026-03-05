@@ -34,9 +34,9 @@ export default function PrivacyPage() {
             2. How We Use Your Data
           </h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
-            We use your data to provide and operate the service, process
-            payments, track your coin balance, and improve the product. We do
-            not sell your personal information to third parties.
+            We use your data to provide and operate the service, track your
+            usage, and improve the product. We do not sell your personal
+            information to third parties.
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">
@@ -48,10 +48,7 @@ export default function PrivacyPage() {
           </p>
           <ul className="text-white/60 text-sm leading-relaxed mb-6 list-disc list-inside space-y-1">
             <li>
-              <strong>Supabase</strong> — database and authentication
-            </li>
-            <li>
-              <strong>Stripe</strong> — payment processing
+              <strong>Firebase</strong> — database and authentication
             </li>
             <li>
               <strong>Anthropic</strong> — AI prompt generation
@@ -66,10 +63,10 @@ export default function PrivacyPage() {
 
           <h2 className="text-lg font-semibold mt-8 mb-3">4. Cookies</h2>
           <p className="text-white/60 text-sm leading-relaxed mb-6">
-            We use a minimal number of cookies. Supabase authentication cookies
-            are required for the service to function and keep you signed in. We
-            also use a referral tracking cookie that expires after 30 days. We
-            do not use advertising or analytics cookies.
+            We use a minimal number of cookies. A session cookie is required
+            for the service to function and keep you signed in. We also use a
+            referral tracking cookie that expires after 30 days. We do not use
+            advertising or analytics cookies.
           </p>
 
           <h2 className="text-lg font-semibold mt-8 mb-3">

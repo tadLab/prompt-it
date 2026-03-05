@@ -2,16 +2,16 @@ import Link from "next/link";
 
 export default function ExampleSection() {
   return (
-    <section id="example" className="scroll-mt-20 pt-24 pb-16 px-6">
+    <section id="example" className="scroll-mt-20 py-28 px-6">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-14">
           <div className="badge inline-block mb-4">See the difference</div>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
             WHY STRUCTURED PROMPTS WORK BETTER
           </h2>
-          <p className="text-white/50">
-            Compare a vague prompt with a structured one and see the difference.
+          <p className="text-white/50 max-w-md mx-auto">
+            Compare a vague prompt with a structured one — the difference in AI output is dramatic.
           </p>
         </div>
 

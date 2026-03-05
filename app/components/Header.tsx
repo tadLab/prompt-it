@@ -10,7 +10,7 @@ export default function Header() {
   const pathname = usePathname();
   const isBuilder = pathname === "/builder";
   const count = useHistoryCount();
-  const { user, coins, supabase } = useAuth();
+  const { user, promptsRemaining, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -31,36 +31,35 @@ export default function Header() {
   }, [dropdownOpen]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     window.location.href = "/";
   };
 
   // Anchor links: use # on home page, /# on other pages
-  const exampleHref = pathname === "/" ? "#example" : "/#example";
-  const pricingHref = pathname === "/" ? "#pricing" : "/#pricing";
+  const anchor = (hash: string) => pathname === "/" ? hash : `/${hash}`;
 
   const navLinks = (
     <>
       <a
-        href={exampleHref}
+        href={anchor("#about")}
+        className="text-sm text-white/60 hover:text-white transition-colors"
+        onClick={() => setMenuOpen(false)}
+      >
+        About
+      </a>
+      <a
+        href={anchor("#example")}
         className="text-sm text-white/60 hover:text-white transition-colors"
         onClick={() => setMenuOpen(false)}
       >
         Example
       </a>
-      <Link
-        href="/builder"
-        className="text-sm text-white/60 hover:text-white transition-colors"
-        onClick={() => setMenuOpen(false)}
-      >
-        Builder
-      </Link>
       <a
-        href={pricingHref}
+        href={anchor("#how-it-works")}
         className="text-sm text-white/60 hover:text-white transition-colors"
         onClick={() => setMenuOpen(false)}
       >
-        Pricing
+        How it works
       </a>
     </>
   );
@@ -73,10 +72,10 @@ export default function Header() {
         className="flex items-center"
         aria-label="Account menu"
       >
-        {user.user_metadata?.avatar_url ? (
+        {user.picture ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={user.user_metadata.avatar_url}
+            src={user.picture}
             alt=""
             className="w-8 h-8 rounded-full border border-white/20 hover:border-emerald-400/40 transition-colors"
           />
@@ -93,12 +92,12 @@ export default function Header() {
       {/* Account dropdown */}
       {dropdownOpen && (
         <div className="absolute right-0 top-full mt-2 w-48 glass-card-bright p-2 fade-in z-50 rounded-xl">
-          {/* Coin balance */}
+          {/* Prompts remaining */}
           <div className="px-3 py-2 border-b border-white/10 mb-1">
             <div className="flex items-center gap-1.5">
               <span className="text-emerald-400 text-xs">●</span>
-              <span className="text-sm font-medium">{coins}</span>
-              <span className="text-white/40 text-xs">coins</span>
+              <span className="text-sm font-medium">{promptsRemaining}</span>
+              <span className="text-white/40 text-xs">prompts left</span>
             </div>
           </div>
 
@@ -149,6 +148,9 @@ export default function Header() {
       {/* Desktop nav */}
       <nav className="hidden md:flex items-center gap-6">
         {navLinks}
+        <Link href="/builder" className="btn-primary text-sm !px-4 !py-1.5 rounded-full">
+          Build →
+        </Link>
         {authSection}
       </nav>
 
@@ -174,13 +176,20 @@ export default function Header() {
           <nav className="flex flex-col items-center gap-6 text-lg">
             {navLinks}
           </nav>
+          <Link
+            href="/builder"
+            className="btn-primary text-base !px-6 !py-2.5 rounded-full mt-2"
+            onClick={() => setMenuOpen(false)}
+          >
+            Build →
+          </Link>
           <div className="flex flex-col items-center gap-4 mt-4">
             {user ? (
               <>
                 <div className="badge flex items-center gap-1.5">
                   <span className="text-emerald-400 text-xs">●</span>
-                  <span className="text-sm font-medium">{coins}</span>
-                  <span className="text-white/40 text-xs ml-1">coins</span>
+                  <span className="text-sm font-medium">{promptsRemaining}</span>
+                  <span className="text-white/40 text-xs ml-1">prompts left</span>
                 </div>
                 <Link
                   href="/history"

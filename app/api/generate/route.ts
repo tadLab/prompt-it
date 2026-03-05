@@ -1,47 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/firebase/server-auth";
+import { getAdminDb } from "@/lib/firebase/admin";
+import { getUserProfile, getAnonymousGenerationCount, incrementCoins } from "@/lib/firebase/db";
 import { env } from "@/lib/env";
 import { createHash } from "crypto";
+import { FieldValue } from "firebase-admin/firestore";
 
-const SYSTEM_PROMPT = `You are a prompt engineering assistant. Your job is to take a user's raw inputs and generate a high-quality, structured prompt that they can use with any AI model.
+const SYSTEM_PROMPT = `Turn user inputs (Task, Context, Output, Preferences, Role) into a structured prompt with sections: ### Role, ### Goal, ### Context, ### Requirements, ### Output Format.
 
-You will receive 5 inputs:
-1. Task - what they want AI to help with
-2. Context - who it's for, background info
-3. Output - desired output format
-4. Preferences - tone, constraints, language
-5. Role - the AI role/expertise level
+Respond with ONLY valid JSON:
+{"prompt":"structured prompt with ### headers","recommendedModel":"Claude|ChatGPT|Gemini","whyThisModel":"one sentence","alternatives":["Alt1","Alt2"]}
 
-Generate a structured prompt with these sections:
-- ### Role
-- ### Goal
-- ### Context
-- ### Requirements
-- ### Output Format
-
-Also recommend the best AI model for this prompt and explain why.
-
-Return ONLY valid JSON in this exact format:
-{
-  "prompt": "The full structured prompt text with ### headers",
-  "recommendedModel": "Model name (e.g. Claude, ChatGPT, Gemini)",
-  "whyThisModel": "One sentence explanation",
-  "alternatives": ["Alt1", "Alt2"]
-}
-
-Guidelines:
-- Make the prompt clear, specific, and immediately usable
-- Use bullet points in sections where appropriate
-- Keep it concise but thorough
-- Choose the model recommendation based on the task type:
-  - Claude: structured tasks, analysis, long context, coding
-  - ChatGPT: creative writing, marketing, conversational tasks
-  - Gemini: research, multimodal tasks, data analysis
-- Always include exactly 2 alternatives`;
+Model guide: Claude=structured/analysis/coding, ChatGPT=creative/marketing/conversational, Gemini=research/multimodal/data. Use bullet points, be concise but thorough.`;
 
 export async function POST(req: NextRequest) {
-  // Parse body once upfront so it's available in both try and catch
   const body = await req.json();
   const { task, context, output, preferences, role } = body;
 
@@ -63,11 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   // --- AUTH & USAGE CHECK ---
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const serviceClient = createServiceClient();
+  const user = await getAuthUser();
 
   // Generate anonymous ID from IP for free tier tracking
   const ip =
@@ -79,32 +48,20 @@ export async function POST(req: NextRequest) {
     .digest("hex")
     .slice(0, 16);
 
-  let userCoins = 0;
-
   if (user) {
-    // Authenticated user — check coin balance
-    const { data: profile } = await serviceClient
-      .from("profiles")
-      .select("coins")
-      .eq("id", user.id)
-      .single();
+    const profile = await getUserProfile(user.uid);
+    const remaining = profile?.coins ?? 0;
 
-    userCoins = profile?.coins ?? 0;
-
-    if (userCoins <= 0) {
+    if (remaining <= 0) {
       return NextResponse.json(
-        { error: "Payment required", code: "PAYMENT_REQUIRED" },
+        { error: "Prompt limit reached (10 per account)", code: "LIMIT_REACHED" },
         { status: 403 }
       );
     }
   } else {
-    // Anonymous user — allow max 1 free generation per IP
-    const { count } = await serviceClient
-      .from("generations")
-      .select("*", { count: "exact", head: true })
-      .eq("anonymous_id", anonymousId);
+    const count = await getAnonymousGenerationCount(anonymousId);
 
-    if ((count ?? 0) >= 1) {
+    if (count >= 1) {
       return NextResponse.json(
         { error: "Sign up required", code: "AUTH_REQUIRED" },
         { status: 401 }
@@ -113,11 +70,12 @@ export async function POST(req: NextRequest) {
   }
 
   // --- GENERATE PROMPT ---
+  let parsed;
   try {
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
     const message = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: [
@@ -128,13 +86,11 @@ export async function POST(req: NextRequest) {
       ],
     });
 
-    // Extract text from response
     const textBlock = message.content.find((block) => block.type === "text");
     if (!textBlock || textBlock.type !== "text") {
       throw new Error("No text in response");
     }
 
-    // Parse JSON - handle possible markdown code fences
     let jsonText = textBlock.text.trim();
     if (jsonText.startsWith("```")) {
       jsonText = jsonText
@@ -142,40 +98,38 @@ export async function POST(req: NextRequest) {
         .replace(/\n?```$/, "");
     }
 
-    const parsed = JSON.parse(jsonText);
-
-    // Log the generation
-    const { data: generation } = await serviceClient
-      .from("generations")
-      .insert({
-        user_id: user?.id || null,
-        anonymous_id: user ? null : anonymousId,
-      })
-      .select("id")
-      .single();
-
-    // Deduct 1 coin for authenticated users
-    let remainingCoins = userCoins;
-    if (user) {
-      const { data } = await serviceClient.rpc("increment_coins", {
-        user_id: user.id,
-        amount: -1,
-      });
-      remainingCoins = data ?? userCoins - 1;
-    }
-
-    return NextResponse.json({
-      prompt: parsed.prompt,
-      recommendedModel: parsed.recommendedModel,
-      whyThisModel: parsed.whyThisModel,
-      alternatives: parsed.alternatives,
-      remainingCoins,
-      generationId: generation?.id,
-    });
+    parsed = JSON.parse(jsonText);
   } catch (error) {
-    console.error("Generate error:", error);
+    console.error("AI generation error:", error);
     return NextResponse.json(generateFallbackPrompt(body));
   }
+
+  // --- LOG & DEDUCT (best-effort) ---
+  let generationId: string | undefined;
+
+  try {
+    const genRef = await getAdminDb().collection("generations").add({
+      userId: user?.uid || null,
+      anonymousId: user ? null : anonymousId,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    generationId = genRef.id;
+
+    if (user) {
+      await incrementCoins(user.uid, -1);
+    }
+  } catch (dbError) {
+    console.error("DB logging error (prompt still returned):", dbError);
+  }
+
+  return NextResponse.json({
+    prompt: parsed.prompt,
+    recommendedModel: parsed.recommendedModel,
+    whyThisModel: parsed.whyThisModel,
+    alternatives: parsed.alternatives,
+    generationId,
+  });
 }
 
 function generateFallbackPrompt(inputs: {

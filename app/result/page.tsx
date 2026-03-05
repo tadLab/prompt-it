@@ -136,12 +136,12 @@ export default function ResultPage() {
                   <span>👎</span> Not great
                 </button>
               </div>
-              <p className="text-white/30 text-xs mt-2">Rate to earn +1 coin</p>
+              <p className="text-white/30 text-xs mt-2">Your feedback helps us improve</p>
             </div>
           )}
           {rated && (
             <div className="glass-card p-5 mb-10 text-center">
-              <p className="text-emerald-400 text-sm font-medium">Thanks for rating! +1 coin earned</p>
+              <p className="text-emerald-400 text-sm font-medium">Thanks for rating!</p>
             </div>
           )}
 
