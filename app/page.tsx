@@ -16,31 +16,31 @@ export default function Home() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               AI-Powered Prompt Engineering
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-6 whitespace-nowrap">
+            <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-4 sm:mb-6">
               BUILD BETTER PROMPTS.
             </h1>
-            <p className="text-gradient-green text-3xl md:text-5xl font-bold tracking-tight mb-6">
+            <p className="text-gradient-green text-xl sm:text-3xl md:text-5xl font-bold tracking-tight mb-4 sm:mb-6">
               GET BETTER AI RESULTS.
             </p>
-            <p className="text-white/60 text-lg mb-2">
+            <p className="text-white/60 text-sm sm:text-lg mb-2">
               Engineer prompts that AI actually understands.
             </p>
-            <p className="text-white/50 text-base mb-10">
+            <p className="text-white/50 text-xs sm:text-base mb-8 sm:mb-10">
               We turn your idea into a structured prompt and recommend the best AI model for it.
             </p>
-            <div className="flex items-center justify-center gap-4">
-              <Link href="/builder" className="btn-primary inline-flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full">
+              <Link href="/builder" className="btn-primary inline-flex items-center justify-center gap-2 w-full sm:w-auto">
                 Build my prompt <span className="text-lg">→</span>
               </Link>
-              <a href="#example" className="btn-secondary">
+              <a href="#example" className="btn-secondary w-full sm:w-auto text-center">
                 See example
               </a>
             </div>
 
             {/* Trusted by line */}
-            <div className="mt-16 flex flex-col items-center gap-3">
+            <div className="mt-12 sm:mt-16 flex flex-col items-center gap-3">
               <p className="text-white/25 text-xs uppercase tracking-widest">Works with</p>
-              <div className="flex items-center gap-6 text-white/30 text-sm">
+              <div className="flex items-center gap-3 sm:gap-6 text-white/30 text-xs sm:text-sm">
                 <span>ChatGPT</span>
                 <span className="w-1 h-1 rounded-full bg-white/20" />
                 <span>Claude</span>

@@ -7,7 +7,7 @@ export default function ExampleSection() {
         {/* Header */}
         <div className="text-center mb-14">
           <div className="badge inline-block mb-4">See the difference</div>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
             WHY STRUCTURED PROMPTS WORK BETTER
           </h2>
           <p className="text-white/50 max-w-md mx-auto">
