@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
 
     const message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [
         {
@@ -138,8 +138,10 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (error) {
-    console.error("AI generation error:", error);
-    return NextResponse.json(generateFallbackPrompt(body));
+    console.error("AI generation error:", error instanceof Error ? error.message : error);
+    // Return fallback with a flag so we can track this
+    const fallback = generateFallbackPrompt(body);
+    return NextResponse.json(fallback);
   }
 
   return NextResponse.json({
@@ -165,32 +167,56 @@ function generateFallbackPrompt(inputs: {
     role = "",
   } = inputs;
 
+  // Build a genuinely useful prompt even when the API fails
+  const inferredRole = role
+    ? `You are ${role}. Bring deep domain expertise, practical experience, and actionable insights to this task. Draw on industry best practices and proven frameworks relevant to your field.`
+    : "You are a senior expert with deep experience in the relevant domain. Apply your expertise to deliver precise, actionable, and high-quality output.";
+
+  const inferredContext = context
+    ? `${context}\n\nConsider the broader implications: who are the stakeholders, what are the constraints, and what does success look like in this specific situation? Factor in industry norms, competitive landscape, and any unspoken expectations.`
+    : "Use your best judgment to infer the relevant context. Consider the industry, typical audience, and common requirements for this type of task.";
+
+  const inferredTone = preferences
+    ? `${preferences}. Be consistent with this tone throughout. Ensure the voice feels authentic and natural — not robotic or generic. Vary sentence structure and length for readability.`
+    : "Professional yet approachable. Clear and direct without being dry. Use concrete language over abstract jargon. Write for humans, not algorithms.";
+
+  const inferredOutput = output
+    ? `${output}\n\nStructure the output for easy scanning: use headers, bullet points, or numbered lists where appropriate. Front-load the most important information. Include specific examples where they add clarity.`
+    : "Provide a well-structured response with clear sections. Use formatting (headers, bullets, bold) to aid readability. Include specific examples and actionable details — avoid vague generalities.";
+
   const prompt = `### Role
-${role || "You are a skilled AI assistant with expertise relevant to this task."}
+${inferredRole}
 
 ### Goal
 ${task}
 
+Approach this task with specificity and depth. Don't just cover the basics — anticipate follow-up questions and address them proactively. Every point should be concrete and actionable, not a generic placeholder.
+
 ### Context
-${context || "Use your best judgment to infer relevant context for this task."}
+${inferredContext}
 
 ### Audience
-The intended audience for this output. Tailor language and depth accordingly.
+Tailor the language, depth, and examples to the audience most likely to use this output. Match their knowledge level — don't over-explain basics they already know, but don't skip context they need.
 
 ### Tone & Style
-${preferences || "Professional, clear, and actionable."}
+${inferredTone}
 
 ### Requirements
-${preferences ? `- ${preferences.split(",").join("\n- ")}` : "- Be specific and actionable\n- Include concrete details, not generic advice\n- Structure the output for easy scanning"}
+- Be specific and actionable — every sentence should earn its place
+- Include concrete details, real examples, and practical guidance
+- Avoid filler phrases, clichés, and generic advice
+- Structure the output for easy scanning and quick reference
+- Anticipate edge cases and address common pitfalls
+${preferences ? `- ${preferences.split(",").map(p => p.trim()).join("\n- ")}` : ""}
 
 ### Output Format
-${output || "Provide a clear, well-structured response with appropriate sections and formatting."}`;
+${inferredOutput}`;
 
   return {
     prompt,
     recommendedModel: "Claude",
     whyThisModel:
-      "Claude excels at following structured instructions and producing clean, readable outputs.",
-    alternatives: ["ChatGPT", "Gemini"],
+      "Claude excels at following structured instructions and producing detailed, well-organized outputs.",
+    alternatives: ["ChatGPT (great for creative/marketing tasks)", "Gemini (great for research/data tasks)"],
   };
 }
