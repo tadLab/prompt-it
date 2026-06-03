@@ -11,6 +11,12 @@ import {
   type PromptResult,
 } from "../hooks/usePromptStore";
 import { useHistory } from "../hooks/useHistory";
+import {
+  AI_TARGETS,
+  getTarget,
+  targetIdForModel,
+  type AiTarget,
+} from "../lib/aiTargets";
 
 export default function ResultPage() {
   const router = useRouter();
@@ -19,6 +25,7 @@ export default function ResultPage() {
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
+  const [openedTarget, setOpenedTarget] = useState<string | null>(null);
   const hasSaved = useRef(false);
 
   useEffect(() => {
@@ -54,7 +61,27 @@ export default function ResultPage() {
     setIsEditing(!isEditing);
   };
 
+  // Open in AI: copy prompt to clipboard first (so the user can paste if the
+  // provider doesn't honor the prefill param), then open the chat in a new tab.
+  const handleOpenIn = async (target: AiTarget) => {
+    if (!result) return;
+    const text = isEditing ? editedPrompt : result.prompt;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Clipboard may be unavailable (permissions / insecure context) — the
+      // deep-link still opens, so the user isn't blocked.
+    }
+    window.open(target.buildUrl(text), "_blank", "noopener,noreferrer");
+    setOpenedTarget(target.id);
+    setTimeout(() => setOpenedTarget(null), 5000);
+  };
+
   if (!result) return null;
+
+  const recommendedId = targetIdForModel(result.recommendedModel);
+  const recommendedTarget = recommendedId ? getTarget(recommendedId) : null;
+  const otherTargets = AI_TARGETS.filter((t) => t.id !== recommendedId);
 
   return (
     <div className="bg-gradient-main flex flex-col min-h-screen">
@@ -112,6 +139,40 @@ export default function ResultPage() {
                 </h3>
                 <p className="text-white/70 text-sm">{result.whyThisModel}</p>
               </div>
+
+              {/* Open in AI — fuses model matching with one-click insert */}
+              <div className="pt-4 border-t border-white/10">
+                <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-3">
+                  Open with your prompt
+                </h3>
+                <div className="flex flex-wrap items-center gap-3">
+                  {recommendedTarget && (
+                    <button
+                      onClick={() => handleOpenIn(recommendedTarget)}
+                      aria-label={`Open prompt in ${recommendedTarget.label}`}
+                      className="btn-primary text-sm"
+                    >
+                      Open in {recommendedTarget.label} →
+                    </button>
+                  )}
+                  {(recommendedTarget ? otherTargets : AI_TARGETS).map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleOpenIn(t)}
+                      aria-label={`Open prompt in ${t.label}`}
+                      className="btn-secondary text-sm"
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-white/40 text-xs mt-3">
+                  {openedTarget
+                    ? "Prompt copied — if it didn't pre-fill, just paste (⌘/Ctrl + V)."
+                    : "We copy your prompt and open the chat — paste if it doesn't auto-fill."}
+                </p>
+              </div>
+
               <div>
                 <h3 className="text-sm font-bold mb-2">Alternatives</h3>
                 <ul className="space-y-1">
