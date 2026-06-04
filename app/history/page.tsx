@@ -38,7 +38,7 @@ function HistoryCard({
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-white/90 truncate">
-            {entry.inputs.task}
+            {entry.inputs.goal ?? entry.inputs.task ?? "Prompt"}
           </p>
           <p className="text-xs text-white/40 mt-1">{formatDate(entry.createdAt)}</p>
         </div>

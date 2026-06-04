@@ -6,11 +6,14 @@ export interface HistoryEntry {
   id: string;
   createdAt: string;
   inputs: {
-    task: string;
-    context: string;
-    output: string;
-    preferences: string;
-    role: string;
+    goal?: string;
+    answers?: { question: string; answer: string }[];
+    // Legacy entries (created before the adaptive intake) used these fields.
+    task?: string;
+    context?: string;
+    output?: string;
+    preferences?: string;
+    role?: string;
   };
   result: {
     prompt: string;

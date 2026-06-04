@@ -271,6 +271,27 @@ export default function ResultPage() {
             </div>
           )}
 
+          {/* Assumptions — what the model inferred for anything unspecified */}
+          {result.assumptions && result.assumptions.length > 0 && (
+            <div className="glass-card p-5 mb-10">
+              <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-3">
+                What we assumed
+              </h3>
+              <ul className="space-y-1.5">
+                {result.assumptions.map((a, i) => (
+                  <li key={i} className="text-white/70 text-sm flex gap-2">
+                    <span className="text-emerald-400/60">•</span>
+                    <span>{a}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-white/40 text-xs mt-3">
+                Something off? Tweak it with{" "}
+                <span className="text-emerald-400">Refine</span> above.
+              </p>
+            </div>
+          )}
+
           {/* Recommendations */}
           <div>
             <h2 className="text-xl font-bold tracking-tight mb-4">

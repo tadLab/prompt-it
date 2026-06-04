@@ -2,12 +2,16 @@
 
 // Store wizard state in sessionStorage so it survives page navigation
 
+export interface WizardAnswer {
+  question: string;
+  answer: string;
+}
+
+// Adaptive intake: the user types one goal, then optionally answers a few
+// AI-generated questions. Anything skipped is inferred at generation time.
 export interface WizardInputs {
-  task: string;
-  context: string;
-  output: string;
-  preferences: string;
-  role: string;
+  goal: string;
+  answers: WizardAnswer[];
 }
 
 export interface PromptResult {
@@ -16,25 +20,31 @@ export interface PromptResult {
   promptEnglish?: string;
   promptLocalized?: string;
   detectedLanguage?: string;
+  // Inferred defaults for anything the user didn't specify.
+  assumptions?: string[];
   recommendedModel: string;
   whyThisModel: string;
   alternatives: string[];
   generationId?: string;  // Added for rating system
 }
 
+const EMPTY_INPUTS: WizardInputs = { goal: "", answers: [] };
+
 const SESSION_KEY = "prompt-it-wizard";
 const RESULT_KEY = "prompt-it-result";
 
 export function getWizardInputs(): WizardInputs {
-  if (typeof window === "undefined")
-    return { task: "", context: "", output: "", preferences: "", role: "" };
+  if (typeof window === "undefined") return { ...EMPTY_INPUTS };
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw
-      ? JSON.parse(raw)
-      : { task: "", context: "", output: "", preferences: "", role: "" };
+    if (!raw) return { ...EMPTY_INPUTS };
+    const parsed = JSON.parse(raw);
+    return {
+      goal: typeof parsed.goal === "string" ? parsed.goal : "",
+      answers: Array.isArray(parsed.answers) ? parsed.answers : [],
+    };
   } catch {
-    return { task: "", context: "", output: "", preferences: "", role: "" };
+    return { ...EMPTY_INPUTS };
   }
 }
 

@@ -6,7 +6,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { getWizardInputs, savePromptResult } from "../hooks/usePromptStore";
 
-const CHECKLIST_ITEMS = ["TASK", "CONTEXT", "OUTPUT", "PREFERENCES", "ROLE"];
+const CHECKLIST_ITEMS = ["GOAL", "CONTEXT", "STRUCTURE", "MODEL", "POLISH"];
 
 export default function LoadingPromptPage() {
   const router = useRouter();
@@ -20,7 +20,7 @@ export default function LoadingPromptPage() {
 
     const inputs = getWizardInputs();
 
-    if (!inputs.task) {
+    if (!inputs.goal) {
       router.replace("/builder");
       return;
     }

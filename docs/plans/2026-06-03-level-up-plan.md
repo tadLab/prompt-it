@@ -98,20 +98,17 @@ Clears debris from the Stripe/Firebase eras so the codebase tells the truth.
 
 ### 1.0 Smart intake (the new centerpiece — replaces the static 5-field wizard)
 
-- [ ] **1.0a Single goal box.** One required input: "What do you want?" A
-      **"Generate now"** action is always available right there — this is the
-      low-barrier floor. Nobody is forced into the questions.
-- [ ] **1.0b Adaptive questions.** After the goal is entered, the model returns
-      3–5 **short, input-specific** clarifying questions (not the fixed
-      `task/context/output/preferences/role`). Rendered as quick chips / short
-      fields. Depends on **1.1** (structured outputs) to return the question list
-      reliably and **1.2** (Sonnet) for quality.
-- [ ] **1.0c Skippable + infer-and-show.** Every question skippable; "Generate"
-      always present. Skipped answers are **inferred by the model, and the
-      assumption is surfaced and editable** ("Assumed: casual-professional tone,
-      ~3 sentences — tap to change"). Directly addresses "novices don't infer."
-- [ ] **1.0d Retire the static `STEPS` wizard** in `app/builder/page.tsx` once the
-      smart intake covers its job (or keep it only as a hidden fallback).
+- [x] **1.0a Single goal box.** ✅ **DONE.** `/builder` phase 1: one goal box +
+      **"Skip & generate now"** (the low-barrier floor) + "Continue →".
+- [x] **1.0b Adaptive questions.** ✅ **DONE.** New `/api/clarify` (tool use, Sonnet)
+      returns 3–5 short, goal-specific questions in the user's language, each with
+      optional quick-pick chips. Non-blocking: empty/failed → straight to generate.
+- [x] **1.0c Skippable + infer-and-show.** ✅ **DONE.** Every question skippable;
+      Generate always available. `/api/generate` infers unspecified aspects and
+      returns an `assumptions` list, shown on `/result` as "What we assumed" with a
+      pointer to Refine. Verified: 2 answered + 3 skipped → 7 surfaced assumptions.
+- [x] **1.0d Retire the static `STEPS` wizard.** ✅ **DONE.** Replaced the 5-step
+      fixed wizard in `app/builder/page.tsx` with the goal → adaptive-questions flow.
 
 ### 1.1+ Generation quality (powers the intake above)
 

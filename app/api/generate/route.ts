@@ -56,6 +56,10 @@ ENRICHMENT GUIDELINES:
 - If the input is vague → add reasonable defaults and practical specifics that make the prompt actually useful
 - If the user mentions code/technical work → add instructions about edge cases, error handling, documentation, testing
 
+INFERENCE & ASSUMPTIONS:
+- The user may leave gaps (skipped questions, missing details). Do NOT ask for more — infer a sensible, specific default and proceed.
+- Record every meaningful gap you filled in the assumptions list, each as a short "Topic: assumed value" in the user's language (e.g. "Tón: profesionální, ale přátelský"). If the user specified everything, return an empty assumptions list.
+
 LANGUAGE & BILINGUAL OUTPUT:
 - Detect the language of the user's input and report it as an ISO 639-1 code (e.g. "en", "cs", "sk").
 - ALWAYS produce an optimized prompt in English — AI models perform best with English prompts.
@@ -88,6 +92,12 @@ const OUTPUT_TOOL: Anthropic.Tool = {
         description:
           "The same optimized prompt written natively in the user's input language. Empty string if the input was already English.",
       },
+      assumptions: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "Aspects the user did NOT specify that you inferred, each phrased as a short 'Topic: assumed value' (in the user's language). Empty array if everything was specified.",
+      },
       recommendedModel: {
         type: "string",
         enum: ["Claude", "ChatGPT", "Gemini"],
@@ -107,6 +117,7 @@ const OUTPUT_TOOL: Anthropic.Tool = {
       "detectedLanguage",
       "promptEnglish",
       "promptLocalized",
+      "assumptions",
       "recommendedModel",
       "whyThisModel",
       "alternatives",
@@ -118,6 +129,7 @@ interface OptimizedPromptOutput {
   detectedLanguage: string;
   promptEnglish: string;
   promptLocalized: string;
+  assumptions: string[];
   recommendedModel: string;
   whyThisModel: string;
   alternatives: string[];
@@ -125,7 +137,7 @@ interface OptimizedPromptOutput {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { task, context, output, preferences, role, refinePrompt, feedback } = body;
+  const { task, context, output, preferences, role, refinePrompt, feedback, goal, answers } = body;
 
   // Refine mode: improve an existing prompt from user feedback instead of
   // building one from the wizard fields.
@@ -135,8 +147,15 @@ export async function POST(req: NextRequest) {
     refinePrompt.trim().length > 0 &&
     feedback.trim().length > 0;
 
-  if (!isRefine && !task) {
-    return NextResponse.json({ error: "Task is required" }, { status: 400 });
+  // Intake mode: a single goal plus optional answers to adaptive questions.
+  const intakeGoal = typeof goal === "string" ? goal.trim() : "";
+  const isIntake = !isRefine && intakeGoal.length > 0;
+
+  if (!isRefine && !isIntake && !task) {
+    return NextResponse.json({ error: "Goal or task is required" }, { status: 400 });
+  }
+  if (intakeGoal.length > 2000) {
+    return NextResponse.json({ error: "Goal exceeds maximum length" }, { status: 400 });
   }
 
   const MAX_FIELD_LENGTH = 2000;
@@ -173,6 +192,8 @@ export async function POST(req: NextRequest) {
           role: "user",
           content: isRefine
             ? `Here is an existing prompt you produced earlier:\n---\n${refinePrompt}\n---\n\nThe user wants to refine it with this feedback: "${feedback}"\n\nApply the feedback and return an improved version. Keep the overall structure and quality bar; change what the feedback asks for (and whatever is needed to support it). Preserve the bilingual behavior (English + localized).`
+            : isIntake
+            ? buildIntakeContent(intakeGoal, answers)
             : `Task: ${task}\nContext: ${context}\nOutput format: ${output}\nPreferences: ${preferences}\nRole: ${role}`,
         },
       ],
@@ -194,7 +215,10 @@ export async function POST(req: NextRequest) {
     if (isRefine) {
       return NextResponse.json({ error: "Refine failed" }, { status: 502 });
     }
-    return NextResponse.json(generateFallbackPrompt(body));
+    // Intake mode has no `task`; map the goal in so the fallback is still useful.
+    return NextResponse.json(
+      generateFallbackPrompt(isIntake ? { ...body, task: intakeGoal } : body)
+    );
   }
 
   const promptLocalized =
@@ -207,10 +231,27 @@ export async function POST(req: NextRequest) {
     promptEnglish: out.promptEnglish,
     promptLocalized,
     detectedLanguage: out.detectedLanguage || "en",
+    assumptions: Array.isArray(out.assumptions) ? out.assumptions : [],
     recommendedModel: out.recommendedModel || "Claude",
     whyThisModel: out.whyThisModel || "Best suited for this type of structured task.",
     alternatives: out.alternatives?.length ? out.alternatives : ["ChatGPT", "Gemini"],
   });
+}
+
+// Builds the model input for intake mode from the goal + any answered questions.
+function buildIntakeContent(
+  goal: string,
+  answers: unknown
+): string {
+  const answered = Array.isArray(answers)
+    ? (answers as { question?: string; answer?: string }[]).filter(
+        (a) => a && typeof a.answer === "string" && a.answer.trim().length > 0
+      )
+    : [];
+  const qa = answered.length
+    ? answered.map((a) => `- ${a.question}: ${a.answer}`).join("\n")
+    : "(the user skipped the questions — infer everything you need)";
+  return `The user's goal:\n${goal}\n\nClarifying answers provided:\n${qa}\n\nBuild the optimized prompt. For anything not specified above, infer sensible, specific defaults and list them in assumptions.`;
 }
 
 function generateFallbackPrompt(inputs: {
@@ -280,6 +321,7 @@ ${inferredOutput}`;
     promptEnglish: prompt,
     promptLocalized: "",
     detectedLanguage: "en",
+    assumptions: [],
     recommendedModel: "Claude",
     whyThisModel:
       "Claude excels at following structured instructions and producing detailed, well-organized outputs.",
