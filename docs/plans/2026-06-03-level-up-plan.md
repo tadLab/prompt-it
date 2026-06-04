@@ -115,19 +115,15 @@ Clears debris from the Stripe/Firebase eras so the codebase tells the truth.
 
 ### 1.1+ Generation quality (powers the intake above)
 
-- [ ] **1.1 Structured outputs via tool use.** Replace the fragile 3-layer JSON
-      parser in `app/api/generate/route.ts` (clean-parse → regex-extract →
-      fallback) with the SDK's **tool use / structured output**, forcing the model
-      to return schema-valid JSON. Deletes ~40 lines of regex guesswork and makes
-      malformed responses structurally impossible. Keep `generateFallbackPrompt`
-      as the network-failure safety net. **Now two structured calls:**
-      (a) `/api/clarify` → returns the adaptive question list for 1.0b;
-      (b) `/api/generate` → returns the final prompt + model recommendation,
-      using the goal + answered + inferred fields.
-- [ ] **1.2 Model upgrade.** ✅ **DECIDED: always Sonnet** (`claude-sonnet-4-6`).
-      Move the default from `claude-haiku-4-5` to Sonnet for higher-quality prompts.
-      No quality toggle for now — revisit only if cost becomes a real concern.
-- [ ] **1.1b Bilingual output (Czech-first beachhead).** Expand the structured
+- [x] **1.1 Structured outputs via tool use.** ✅ **DONE.** `/api/generate` now forces
+      a `submit_optimized_prompt` tool call (`tool_choice`), so output is schema-valid
+      by construction — deleted the ~40-line regex parser. `generateFallbackPrompt`
+      kept as the network-failure net (updated to the new shape). Verified with a real
+      Czech API call. *(Note: the separate `/api/clarify` endpoint for adaptive
+      questions is still TODO — it lands with Phase 1.0.)*
+- [x] **1.2 Model upgrade.** ✅ **DONE.** `claude-haiku-4-5` → `claude-sonnet-4-6`,
+      `max_tokens` 4096 → 8192 (bilingual output is longer). No quality toggle.
+- [x] **1.1b Bilingual output (Czech-first beachhead).** ✅ **DONE.** Expand the structured
       contract from `{prompt}` to `{detectedLanguage, promptEnglish,
       promptLocalized}`. When input isn't English, return **both** an optimal
       English prompt *and* a localized one; when input is English, just the one.

@@ -56,10 +56,72 @@ ENRICHMENT GUIDELINES:
 - If the input is vague → add reasonable defaults and practical specifics that make the prompt actually useful
 - If the user mentions code/technical work → add instructions about edge cases, error handling, documentation, testing
 
-Respond with ONLY valid JSON (no markdown, no backticks):
-{"prompt":"the full structured prompt with ### headers","recommendedModel":"Claude|ChatGPT|Gemini","whyThisModel":"one sentence explaining why","alternatives":["Alt1","Alt2"]}
+LANGUAGE & BILINGUAL OUTPUT:
+- Detect the language of the user's input and report it as an ISO 639-1 code (e.g. "en", "cs", "sk").
+- ALWAYS produce an optimized prompt in English — AI models perform best with English prompts.
+- If the user's input language is NOT English, ALSO produce the same optimized prompt written natively in that language (a natural rewrite, not a literal word-for-word translation). If the input IS English, leave the localized version empty.
+- Both versions must follow the same structure and quality bar.
+
+Return your result by calling the submit_optimized_prompt tool.
 
 Model guide: Claude = structured tasks, analysis, coding, long-form writing. ChatGPT = creative content, marketing, conversational, brainstorming. Gemini = research, multimodal, data analysis, summarization.`;
+
+// Forcing a tool call guarantees schema-valid structured output — no more
+// regex-parsing of free-form JSON that the model might wrap in prose or markdown.
+const OUTPUT_TOOL: Anthropic.Tool = {
+  name: "submit_optimized_prompt",
+  description:
+    "Submit the optimized prompt (English + optional localized version) and the model recommendation.",
+  input_schema: {
+    type: "object",
+    properties: {
+      detectedLanguage: {
+        type: "string",
+        description: "ISO 639-1 code of the user's input language, e.g. 'en', 'cs'.",
+      },
+      promptEnglish: {
+        type: "string",
+        description: "The fully optimized prompt in English, with ### section headers.",
+      },
+      promptLocalized: {
+        type: "string",
+        description:
+          "The same optimized prompt written natively in the user's input language. Empty string if the input was already English.",
+      },
+      recommendedModel: {
+        type: "string",
+        enum: ["Claude", "ChatGPT", "Gemini"],
+        description: "Which AI model best fits this prompt.",
+      },
+      whyThisModel: {
+        type: "string",
+        description: "One sentence explaining the recommendation.",
+      },
+      alternatives: {
+        type: "array",
+        items: { type: "string" },
+        description: "Two alternative models with a short reason each.",
+      },
+    },
+    required: [
+      "detectedLanguage",
+      "promptEnglish",
+      "promptLocalized",
+      "recommendedModel",
+      "whyThisModel",
+      "alternatives",
+    ],
+  },
+};
+
+interface OptimizedPromptOutput {
+  detectedLanguage: string;
+  promptEnglish: string;
+  promptLocalized: string;
+  recommendedModel: string;
+  whyThisModel: string;
+  alternatives: string[];
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -81,14 +143,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let parsed;
+  let out: OptimizedPromptOutput;
   try {
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
     const message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 4096,
+      model: "claude-sonnet-4-6",
+      max_tokens: 8192,
       system: SYSTEM_PROMPT,
+      tools: [OUTPUT_TOOL],
+      tool_choice: { type: "tool", name: OUTPUT_TOOL.name },
       messages: [
         {
           role: "user",
@@ -97,58 +161,33 @@ export async function POST(req: NextRequest) {
       ],
     });
 
-    const textBlock = message.content.find((block) => block.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error("No text in response");
+    const toolUse = message.content.find((block) => block.type === "tool_use");
+    if (!toolUse || toolUse.type !== "tool_use") {
+      throw new Error("Model did not return a tool call");
     }
 
-    let jsonText = textBlock.text.trim();
-    if (jsonText.startsWith("```")) {
-      jsonText = jsonText
-        .replace(/^```(?:json)?\n?/, "")
-        .replace(/\n?```$/, "");
-    }
-
-    // Try to extract JSON object if there's extra text around it
-    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      jsonText = jsonMatch[0];
-    }
-
-    try {
-      parsed = JSON.parse(jsonText);
-    } catch {
-      // If JSON is malformed, try to extract fields manually
-      const promptMatch = jsonText.match(/"prompt"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"recommendedModel)/);
-      const modelMatch = jsonText.match(/"recommendedModel"\s*:\s*"([^"]+)"/);
-      const whyMatch = jsonText.match(/"whyThisModel"\s*:\s*"([^"]+)"/);
-      const altMatch = jsonText.match(/"alternatives"\s*:\s*\[([\s\S]*?)\]/);
-
-      if (promptMatch) {
-        parsed = {
-          prompt: promptMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'),
-          recommendedModel: modelMatch?.[1] || "Claude",
-          whyThisModel: whyMatch?.[1] || "Best suited for this type of structured task.",
-          alternatives: altMatch?.[1]
-            ? altMatch[1].match(/"([^"]+)"/g)?.map((s: string) => s.replace(/"/g, "")) || ["ChatGPT", "Gemini"]
-            : ["ChatGPT", "Gemini"],
-        };
-      } else {
-        throw new Error("Could not parse AI response");
-      }
+    out = toolUse.input as OptimizedPromptOutput;
+    if (!out.promptEnglish || typeof out.promptEnglish !== "string") {
+      throw new Error("Tool output missing promptEnglish");
     }
   } catch (error) {
     console.error("AI generation error:", error instanceof Error ? error.message : error);
-    // Return fallback with a flag so we can track this
-    const fallback = generateFallbackPrompt(body);
-    return NextResponse.json(fallback);
+    return NextResponse.json(generateFallbackPrompt(body));
   }
 
+  const promptLocalized =
+    out.detectedLanguage?.toLowerCase().startsWith("en") ? "" : out.promptLocalized || "";
+
   return NextResponse.json({
-    prompt: parsed.prompt,
-    recommendedModel: parsed.recommendedModel,
-    whyThisModel: parsed.whyThisModel,
-    alternatives: parsed.alternatives,
+    // `prompt` stays as the canonical single string for history / back-compat:
+    // the user's own language when available, otherwise English.
+    prompt: promptLocalized || out.promptEnglish,
+    promptEnglish: out.promptEnglish,
+    promptLocalized,
+    detectedLanguage: out.detectedLanguage || "en",
+    recommendedModel: out.recommendedModel || "Claude",
+    whyThisModel: out.whyThisModel || "Best suited for this type of structured task.",
+    alternatives: out.alternatives?.length ? out.alternatives : ["ChatGPT", "Gemini"],
   });
 }
 
@@ -213,7 +252,12 @@ ${preferences ? `- ${preferences.split(",").map(p => p.trim()).join("\n- ")}` : 
 ${inferredOutput}`;
 
   return {
+    // Offline fallback (network/API failure): English scaffold only, so the
+    // localized version is empty and the UI shows a single prompt.
     prompt,
+    promptEnglish: prompt,
+    promptLocalized: "",
+    detectedLanguage: "en",
     recommendedModel: "Claude",
     whyThisModel:
       "Claude excels at following structured instructions and producing detailed, well-organized outputs.",

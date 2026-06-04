@@ -18,6 +18,20 @@ import {
   type AiTarget,
 } from "../lib/aiTargets";
 
+function languageLabel(code?: string): string {
+  const map: Record<string, string> = {
+    cs: "Čeština",
+    sk: "Slovenčina",
+    de: "Deutsch",
+    fr: "Français",
+    es: "Español",
+    pl: "Polski",
+    it: "Italiano",
+  };
+  if (!code) return "Original";
+  return map[code.toLowerCase()] ?? code.toUpperCase();
+}
+
 export default function ResultPage() {
   const router = useRouter();
   const { addEntry } = useHistory();
@@ -26,6 +40,7 @@ export default function ResultPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedPrompt, setEditedPrompt] = useState("");
   const [openedTarget, setOpenedTarget] = useState<string | null>(null);
+  const [activeLang, setActiveLang] = useState<"local" | "en">("local");
   const hasSaved = useRef(false);
 
   useEffect(() => {
@@ -49,10 +64,20 @@ export default function ResultPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Text shown/used right now: the active language version, or edits on top of it.
+  const activeBaseText = (): string => {
+    if (!result) return "";
+    const en = result.promptEnglish ?? result.prompt;
+    const loc = result.promptLocalized ?? "";
+    const bilingual = !!loc && loc !== en;
+    if (!bilingual) return result.prompt;
+    return activeLang === "en" ? en : loc;
+  };
+  const currentText = () => (isEditing ? editedPrompt : activeBaseText());
+
   const handleCopy = async () => {
     if (!result) return;
-    const text = isEditing ? editedPrompt : result.prompt;
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(currentText());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -61,11 +86,21 @@ export default function ResultPage() {
     setIsEditing(!isEditing);
   };
 
+  // Switching language resets any in-progress edit to the new base text.
+  const switchLang = (lang: "local" | "en") => {
+    if (!result || lang === activeLang) return;
+    setActiveLang(lang);
+    const en = result.promptEnglish ?? result.prompt;
+    const loc = result.promptLocalized ?? "";
+    setEditedPrompt(lang === "en" ? en : loc || en);
+    setIsEditing(false);
+  };
+
   // Open in AI: copy prompt to clipboard first (so the user can paste if the
   // provider doesn't honor the prefill param), then open the chat in a new tab.
   const handleOpenIn = async (target: AiTarget) => {
     if (!result) return;
-    const text = isEditing ? editedPrompt : result.prompt;
+    const text = currentText();
     try {
       await navigator.clipboard.writeText(text);
     } catch {
@@ -78,6 +113,10 @@ export default function ResultPage() {
   };
 
   if (!result) return null;
+
+  const promptEnglish = result.promptEnglish ?? result.prompt;
+  const promptLocalized = result.promptLocalized ?? "";
+  const isBilingual = !!promptLocalized && promptLocalized !== promptEnglish;
 
   const recommendedId = targetIdForModel(result.recommendedModel);
   const recommendedTarget = recommendedId ? getTarget(recommendedId) : null;
@@ -92,6 +131,39 @@ export default function ResultPage() {
             YOUR PROMPT
           </h1>
 
+          {/* Language tabs — only when we have a localized + English version */}
+          {isBilingual && (
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <button
+                onClick={() => switchLang("local")}
+                aria-pressed={activeLang === "local"}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeLang === "local"
+                    ? "bg-emerald-500 text-black"
+                    : "bg-white/5 text-white/60 hover:text-white"
+                }`}
+              >
+                {languageLabel(result.detectedLanguage)}
+              </button>
+              <button
+                onClick={() => switchLang("en")}
+                aria-pressed={activeLang === "en"}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeLang === "en"
+                    ? "bg-emerald-500 text-black"
+                    : "bg-white/5 text-white/60 hover:text-white"
+                }`}
+              >
+                English
+              </button>
+              {activeLang !== "en" && (
+                <span className="text-white/40 text-xs ml-1">
+                  AI modely rozumí anglickým promptům líp — zkus English verzi.
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Prompt output */}
           <div className="glass-card-bright p-6 mb-4">
             {isEditing ? (
@@ -103,7 +175,7 @@ export default function ResultPage() {
               />
             ) : (
               <pre className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                {result.prompt}
+                {activeBaseText()}
               </pre>
             )}
           </div>

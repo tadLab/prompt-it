@@ -12,6 +12,10 @@ export interface WizardInputs {
 
 export interface PromptResult {
   prompt: string;
+  // Bilingual fields (optional — older history entries won't have them).
+  promptEnglish?: string;
+  promptLocalized?: string;
+  detectedLanguage?: string;
   recommendedModel: string;
   whyThisModel: string;
   alternatives: string[];
