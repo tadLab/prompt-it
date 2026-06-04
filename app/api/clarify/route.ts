@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
+import { rateLimit, clientKey, tooManyRequests } from "@/lib/rateLimit";
 
 // Adaptive intake: given the user's rough goal, ask the few clarifying questions
 // THIS goal actually needs — the opposite of a fixed form that asks everyone the
@@ -60,6 +61,9 @@ interface ClarifyOutput {
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(`clarify:${clientKey(req)}`, { limit: 30, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(rl);
+
   const body = await req.json();
   const goal = typeof body.goal === "string" ? body.goal.trim() : "";
 

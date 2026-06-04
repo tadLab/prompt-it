@@ -196,8 +196,12 @@ Real product capabilities, built on the now-solid core.
 - [ ] **4.1 Analytics events** — track generate, refine, copy, share (which
       templates/tasks are popular) via the existing Vercel Analytics.
 - [ ] **4.2 SEO pass** — verify metadata, sitemap, OG image still accurate post-changes.
-- [ ] **4.3 Rate limiting** on `/api/generate` (it's an open, unauthenticated, paid
-      endpoint — protect against abuse before promoting it).
+- [x] **4.3 Rate limiting.** ✅ **DONE.** `lib/rateLimit.ts` (fixed-window, per-IP,
+      in-memory) on all three paid endpoints: `/api/generate` & `/api/generate-stream`
+      (15/min), `/api/clarify` (30/min). Returns 429 + `Retry-After`. Unit-tested;
+      verified live (35 reqs → 30 pass, 5 blocked). **Best-effort on serverless**
+      (per-warm-instance) — for scale, swap the Map for Upstash/Vercel KV (the
+      `RateLimitResult` contract and call sites stay identical).
 - [ ] **4.4 Deploy polish** — env checks, error boundaries, Vercel deploy.
 - [ ] **4.5 (Optional) Accounts/monetization** — only if usage justifies it.
 

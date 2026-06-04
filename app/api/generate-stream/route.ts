@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
 import { PROMPT_CORE, buildUserContent, classifyRequest } from "@/lib/generation";
+import { rateLimit, clientKey, tooManyRequests } from "@/lib/rateLimit";
 
 // Streaming variant of /api/generate. The user-facing prompt streams as plain
 // text (so it materializes live); the metadata follows a ===META=== sentinel as
@@ -19,6 +20,9 @@ Write nothing after the JSON.
 Model guide: Claude = structured tasks, analysis, coding, long-form writing. ChatGPT = creative content, marketing, conversational. Gemini = research, multimodal, data analysis.`;
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(`stream:${clientKey(req)}`, { limit: 15, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(rl);
+
   const body = await req.json();
   const { isRefine, isIntake, intakeGoal } = classifyRequest(body);
 

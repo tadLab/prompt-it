@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
+import { rateLimit, clientKey, tooManyRequests } from "@/lib/rateLimit";
 
 const SYSTEM_PROMPT = `You are an expert prompt engineer. Your job is to transform vague user inputs into detailed, actionable prompts that produce excellent AI outputs.
 
@@ -136,6 +137,9 @@ interface OptimizedPromptOutput {
 }
 
 export async function POST(req: NextRequest) {
+  const rl = rateLimit(`generate:${clientKey(req)}`, { limit: 15, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(rl);
+
   const body = await req.json();
   const { task, context, output, preferences, role, refinePrompt, feedback, goal, answers } = body;
 
