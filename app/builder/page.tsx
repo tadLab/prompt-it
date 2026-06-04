@@ -4,7 +4,7 @@ import { useState, useCallback, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useHistoryCount } from "../hooks/useHistory";
-import { saveWizardInputs, type WizardAnswer } from "../hooks/usePromptStore";
+import { saveWizardInputs, clearPromptResult, type WizardAnswer } from "../hooks/usePromptStore";
 import Footer from "../components/Footer";
 
 interface ClarifyQuestion {
@@ -35,7 +35,8 @@ export default function BuilderPage() {
             .filter((a) => a.answer.length > 0)
         : [];
       saveWizardInputs({ goal: goal.trim(), answers: answerList });
-      router.push("/loading-prompt");
+      clearPromptResult(); // ensure /result streams a fresh prompt
+      router.push("/result");
     },
     [goal, questions, answers, router]
   );

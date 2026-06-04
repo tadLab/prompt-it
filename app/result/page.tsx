@@ -18,6 +18,11 @@ import {
   targetIdForModel,
   type AiTarget,
 } from "../lib/aiTargets";
+import {
+  promptBeforeMeta,
+  parseStreamedResult,
+  hasUsablePrompt,
+} from "../lib/streamResult";
 
 function languageLabel(code?: string): string {
   const map: Record<string, string> = {
@@ -46,26 +51,94 @@ export default function ResultPage() {
   const [feedback, setFeedback] = useState("");
   const [refineLoading, setRefineLoading] = useState(false);
   const [refineError, setRefineError] = useState(false);
+  const [streaming, setStreaming] = useState(false);
+  const [streamedText, setStreamedText] = useState("");
+  const [genError, setGenError] = useState(false);
   const hasSaved = useRef(false);
+  const startedRef = useRef(false);
+
+  const saveToHistoryOnce = (r: PromptResult) => {
+    if (hasSaved.current) return;
+    hasSaved.current = true;
+    addEntry({ inputs: getWizardInputs(), result: r });
+    window.dispatchEvent(new Event("history-updated"));
+  };
+
+  const finalize = (r: PromptResult) => {
+    setResult(r);
+    setActiveLang("local");
+    setEditedPrompt(r.prompt);
+    setStreaming(false);
+    savePromptResult(r);
+    saveToHistoryOnce(r);
+  };
+
+  // Last-resort fallback: the robust tool-use endpoint, if streaming yields nothing.
+  const fallbackGenerate = async (inputs: ReturnType<typeof getWizardInputs>) => {
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inputs),
+      });
+      const data = await res.json();
+      if (!data?.prompt) throw new Error("empty");
+      finalize(data);
+    } catch {
+      setStreaming(false);
+      setGenError(true);
+    }
+  };
+
+  const runStream = async (inputs: ReturnType<typeof getWizardInputs>) => {
+    setStreaming(true);
+    setGenError(false);
+    setStreamedText("");
+    try {
+      const res = await fetch("/api/generate-stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inputs),
+      });
+      if (!res.ok || !res.body) throw new Error("no stream");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        setStreamedText(promptBeforeMeta(buffer));
+      }
+      if (hasUsablePrompt(buffer)) {
+        finalize(parseStreamedResult(buffer));
+      } else {
+        await fallbackGenerate(inputs);
+      }
+    } catch {
+      await fallbackGenerate(inputs);
+    }
+  };
 
   useEffect(() => {
-    const r = getPromptResult();
-    if (!r) {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    // Stored result → came from history/refresh: just show it.
+    const stored = getPromptResult();
+    if (stored) {
+      setResult(stored);
+      setEditedPrompt(stored.prompt);
+      saveToHistoryOnce(stored);
+      return;
+    }
+    // No result yet → fresh generation: stream it.
+    const inputs = getWizardInputs();
+    if (!inputs.goal) {
       router.replace("/builder");
       return;
     }
-    setResult(r);
-    setEditedPrompt(r.prompt);
-
-    if (!hasSaved.current) {
-      hasSaved.current = true;
-      const inputs = getWizardInputs();
-      addEntry({
-        inputs,
-        result: r,
-      });
-      window.dispatchEvent(new Event("history-updated"));
-    }
+    runStream(inputs);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -147,7 +220,48 @@ export default function ResultPage() {
     }
   };
 
-  if (!result) return null;
+  // No result yet → either streaming a fresh prompt, redirecting, or errored.
+  if (!result) {
+    return (
+      <div className="bg-gradient-main flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-1 pt-24 pb-16 px-6">
+          <div className="max-w-3xl mx-auto">
+            {genError ? (
+              <div className="text-center py-20 fade-in">
+                <p className="text-red-400 mb-4">
+                  Something went wrong generating your prompt.
+                </p>
+                <button
+                  onClick={() => {
+                    const i = getWizardInputs();
+                    if (i.goal) runStream(i);
+                  }}
+                  className="btn-secondary text-sm"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-3 mb-6">
+                  <h1 className="text-3xl font-bold tracking-tight">YOUR PROMPT</h1>
+                  <span className="text-emerald-400/70 text-sm loading-dots">building</span>
+                </div>
+                <div className="glass-card-bright p-6 min-h-[300px]">
+                  <pre className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                    {streamedText}
+                    {streaming && <span className="animate-pulse">▋</span>}
+                  </pre>
+                </div>
+              </>
+            )}
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   const promptEnglish = result.promptEnglish ?? result.prompt;
   const promptLocalized = result.promptLocalized ?? "";

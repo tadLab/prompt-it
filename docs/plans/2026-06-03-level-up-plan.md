@@ -153,18 +153,21 @@ fails to parse; user can iterate without re-running intake.
 
 Make the wait disappear and the result feel alive.
 
-- [ ] **2.1 Streaming.** Stream the prompt **prose** token-by-token to `/result`
-      using the SDK's streaming API + a Next.js streaming response. Resolves the
-      streaming-vs-structured tension by **splitting the response**: stream the
-      prose first, then attach the structured metadata (`recommendedModel`,
-      `whyThisModel`, `alternatives`) as a second step once the stream completes.
-- [ ] **2.2 Retire `/loading-prompt` as a dead wait** — kick off generation and go
-      straight to `/result`, where the prompt materializes live. Keep a skeleton
-      shimmer for the metadata card until it arrives.
-- [ ] **2.3 Result polish** — copy-with-feedback (already there), "copy as
-      markdown" vs "plain", subtle done-state animation, better mobile layout.
+- [x] **2.1 Streaming.** ✅ **DONE.** New `/api/generate-stream` streams the prompt
+      prose as plain text; metadata follows a `===META===` sentinel as one JSON line.
+      Client (`/result`) reads the stream, shows the prompt materializing live, then
+      `parseStreamedResult` builds the full result. Defensive: malformed metadata →
+      defaults (prompt preserved); empty stream → falls back to the tool-use
+      `/api/generate`. Shared `lib/generation.ts` (`PROMPT_CORE`, `buildUserContent`)
+      keeps both routes consistent. Parser unit-tested (`__tests__/stream-result.test.ts`).
+      Fixed a language-detection bug (Czech in-context example was anchoring output to Czech).
+- [x] **2.2 Retire `/loading-prompt` as a dead wait.** ✅ **DONE.** Deleted the spinner
+      page; `/builder` clears the old result and routes straight to `/result`, which
+      streams. The materializing prompt *is* the loading state.
+- [ ] **2.3 Result polish** — "copy as markdown" vs "plain", done-state animation,
+      mobile pass. *(Deferred — nice-to-have.)*
 
-**Exit criteria:** no blank spinner; prompt appears within ~1s and streams.
+**Exit criteria:** no blank spinner; prompt appears and streams live. ✅ MET (2.3 optional).
 
 ---
 

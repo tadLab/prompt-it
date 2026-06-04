@@ -72,3 +72,10 @@ export function savePromptResult(result: PromptResult) {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(RESULT_KEY, JSON.stringify(result));
 }
+
+// Cleared before a fresh generation so /result knows to stream a new prompt
+// rather than show the previous one.
+export function clearPromptResult() {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(RESULT_KEY);
+}
