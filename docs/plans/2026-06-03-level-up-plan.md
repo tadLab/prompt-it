@@ -138,10 +138,12 @@ Clears debris from the Stripe/Firebase eras so the codebase tells the truth.
 - [ ] **1.3 System-prompt refinement.** Tighten the expert system prompt — add a
       few-shot example of a great transformation, and an explicit instruction to
       match the user's language (already present) and avoid restating input.
-- [ ] **1.4 Refine loop.** On `/result`, add "Refine" — user types feedback
-      ("make it shorter", "more technical") and we regenerate using the *current
-      prompt + their feedback* as context, instead of starting from the wizard.
-      This is the single biggest perceived-quality win.
+- [x] **1.4 Refine loop.** ✅ **DONE.** `/result` has a "Refine" button → feedback
+      box → "Regenerate". Reuses `/api/generate` in a `refinePrompt + feedback`
+      mode (same tool, model, bilingual response) — sends the *current* prompt +
+      feedback, replaces the result, saves a new history entry. On refine failure
+      it errors (keeps the current prompt) instead of falling back to a generic one.
+      Verified end-to-end (English "shorter + strong hook" → richer hook-first prompt).
 
 **Exit criteria:** a user can type one goal and reach a copy-ready prompt in one
 click (floor preserved); OR answer a few adaptive questions for a sharper result;

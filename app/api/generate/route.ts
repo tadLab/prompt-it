@@ -125,14 +125,22 @@ interface OptimizedPromptOutput {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { task, context, output, preferences, role } = body;
+  const { task, context, output, preferences, role, refinePrompt, feedback } = body;
 
-  if (!task) {
+  // Refine mode: improve an existing prompt from user feedback instead of
+  // building one from the wizard fields.
+  const isRefine =
+    typeof refinePrompt === "string" &&
+    typeof feedback === "string" &&
+    refinePrompt.trim().length > 0 &&
+    feedback.trim().length > 0;
+
+  if (!isRefine && !task) {
     return NextResponse.json({ error: "Task is required" }, { status: 400 });
   }
 
   const MAX_FIELD_LENGTH = 2000;
-  const fields = { task, context, output, preferences, role };
+  const fields = { task, context, output, preferences, role, feedback };
 
   for (const [key, value] of Object.entries(fields)) {
     if (typeof value === "string" && value.length > MAX_FIELD_LENGTH) {
@@ -141,6 +149,13 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+  }
+  // The existing prompt is much longer than a wizard field — allow more room.
+  if (typeof refinePrompt === "string" && refinePrompt.length > 16000) {
+    return NextResponse.json(
+      { error: "refinePrompt exceeds maximum length" },
+      { status: 400 }
+    );
   }
 
   let out: OptimizedPromptOutput;
@@ -156,7 +171,9 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "user",
-          content: `Task: ${task}\nContext: ${context}\nOutput format: ${output}\nPreferences: ${preferences}\nRole: ${role}`,
+          content: isRefine
+            ? `Here is an existing prompt you produced earlier:\n---\n${refinePrompt}\n---\n\nThe user wants to refine it with this feedback: "${feedback}"\n\nApply the feedback and return an improved version. Keep the overall structure and quality bar; change what the feedback asks for (and whatever is needed to support it). Preserve the bilingual behavior (English + localized).`
+            : `Task: ${task}\nContext: ${context}\nOutput format: ${output}\nPreferences: ${preferences}\nRole: ${role}`,
         },
       ],
     });
@@ -172,6 +189,11 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error("AI generation error:", error instanceof Error ? error.message : error);
+    // On refine failure the user still has their current prompt on screen, so
+    // surface an error instead of replacing it with a generic fallback.
+    if (isRefine) {
+      return NextResponse.json({ error: "Refine failed" }, { status: 502 });
+    }
     return NextResponse.json(generateFallbackPrompt(body));
   }
 

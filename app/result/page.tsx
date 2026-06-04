@@ -8,6 +8,7 @@ import Footer from "../components/Footer";
 import {
   getPromptResult,
   getWizardInputs,
+  savePromptResult,
   type PromptResult,
 } from "../hooks/usePromptStore";
 import { useHistory } from "../hooks/useHistory";
@@ -41,6 +42,10 @@ export default function ResultPage() {
   const [editedPrompt, setEditedPrompt] = useState("");
   const [openedTarget, setOpenedTarget] = useState<string | null>(null);
   const [activeLang, setActiveLang] = useState<"local" | "en">("local");
+  const [showRefine, setShowRefine] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [refineLoading, setRefineLoading] = useState(false);
+  const [refineError, setRefineError] = useState(false);
   const hasSaved = useRef(false);
 
   useEffect(() => {
@@ -112,6 +117,36 @@ export default function ResultPage() {
     setTimeout(() => setOpenedTarget(null), 5000);
   };
 
+  // Refine: send the current prompt + the user's feedback back to the model and
+  // replace the result with the improved version (iteration, not regeneration).
+  const handleRefine = async () => {
+    if (!result || !feedback.trim() || refineLoading) return;
+    setRefineLoading(true);
+    setRefineError(false);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refinePrompt: currentText(), feedback: feedback.trim() }),
+      });
+      if (!res.ok) throw new Error("refine failed");
+      const data: PromptResult = await res.json();
+      setResult(data);
+      savePromptResult(data);
+      addEntry({ inputs: getWizardInputs(), result: data });
+      window.dispatchEvent(new Event("history-updated"));
+      setActiveLang("local");
+      setEditedPrompt(data.prompt);
+      setIsEditing(false);
+      setFeedback("");
+      setShowRefine(false);
+    } catch {
+      setRefineError(true);
+    } finally {
+      setRefineLoading(false);
+    }
+  };
+
   if (!result) return null;
 
   const promptEnglish = result.promptEnglish ?? result.prompt;
@@ -181,17 +216,60 @@ export default function ResultPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 mb-10">
+          <div className="flex flex-wrap items-center gap-3 mb-6">
             <button onClick={handleCopy} aria-label="Copy prompt to clipboard" className="btn-primary text-sm">
               {copied ? "Copied!" : "Copy"}
             </button>
             <button onClick={handleEdit} aria-label={isEditing ? "Finish editing" : "Edit prompt"} className="btn-secondary text-sm">
               {isEditing ? "Done" : "Edit"}
             </button>
+            <button
+              onClick={() => {
+                setShowRefine((v) => !v);
+                setRefineError(false);
+              }}
+              aria-label={showRefine ? "Cancel refine" : "Refine prompt"}
+              className="btn-secondary text-sm"
+            >
+              {showRefine ? "Cancel" : "Refine"}
+            </button>
             <Link href="/" className="btn-ghost text-sm">
               Home
             </Link>
           </div>
+
+          {/* Refine panel — iterate on the prompt with natural-language feedback */}
+          {showRefine && (
+            <div className="glass-card p-5 mb-10 fade-in">
+              <label
+                htmlFor="refine-feedback"
+                className="block text-emerald-400 text-xs font-medium tracking-wider mb-2"
+              >
+                What should change?
+              </label>
+              <textarea
+                id="refine-feedback"
+                className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white/90 text-sm outline-none resize-none min-h-[80px] focus:border-emerald-400/40 transition-colors"
+                placeholder="e.g. make it shorter · more technical · add an example · friendlier tone · zaměř se na B2B…"
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                disabled={refineLoading}
+                autoFocus
+              />
+              <div className="flex items-center gap-3 mt-3">
+                <button
+                  onClick={handleRefine}
+                  disabled={!feedback.trim() || refineLoading}
+                  className="btn-primary text-sm"
+                >
+                  {refineLoading ? "Refining…" : "Regenerate"}
+                </button>
+                {refineError && (
+                  <span className="text-red-400 text-xs">Refine failed — try again.</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Recommendations */}
           <div>
