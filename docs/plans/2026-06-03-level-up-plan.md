@@ -48,12 +48,12 @@ edges are **workflow** (Open in AI, future extension), **niche** (Czech), and
 **convenience/speed** — not the structuring itself. Prioritize accordingly.
 
 **Competitive gaps to close (folded into phases below):**
-- [ ] **C1 Before/after proof — MUST-HAVE BEFORE LAUNCH (was Phase 4, now elevated).**
-      Show a weak prompt vs. our enriched result (+ a screenshot of the better AI
-      output). This single feature answers **three** separately-raised pain points:
-      "verified framework" sounds like empty marketing without proof, there's no
-      social proof, and "showing the output difference is the strongest marketing."
-      One artifact, three holes closed. → landing page + maybe inline on `/result`.
+- [x] **C1 Before/after proof.** ✅ **DONE.** Rebuilt `ExampleSection` so the HERO is
+      the difference in AI **output** (not just the prompt): vague prompt → generic
+      hype-y output vs. structured prompt → specific hook-driven output, side by side
+      with captions. Static curated example (no per-visit API cost). Example lives in
+      one `EXAMPLE` const for easy swapping. Closes the three "no proof / empty
+      marketing / no social proof" pain points. *(Landing only; inline-on-/result optional later.)*
 - [ ] **C2 Prompt counter** — "X prompts optimized" social proof. → Phase 4.
 - [ ] **C3 Templates (10–20)** — email-to-boss, blog post, IG caption, code review,
       etc., to lower the entry barrier. → Phase 3.1 (raise priority).
