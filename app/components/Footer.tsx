@@ -1,10 +1,14 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "../i18n/LanguageProvider";
 
 export default function Footer() {
+  const t = useT();
   return (
     <footer className="border-t border-white/5 px-6 py-4 flex items-center justify-between">
       <div className="text-sm text-white/40">
-        Made by{" "}
+        {t("footer.madeBy")}{" "}
         <Link
           href="https://tadeasn.com"
           target="_blank"
@@ -18,13 +22,13 @@ export default function Footer() {
           href="/terms"
           className="text-sm text-white/40 hover:text-white/60 transition-colors"
         >
-          Terms
+          {t("footer.terms")}
         </Link>
         <Link
           href="/privacy"
           className="text-sm text-white/40 hover:text-white/60 transition-colors"
         >
-          Privacy
+          {t("footer.privacy")}
         </Link>
       </div>
     </footer>

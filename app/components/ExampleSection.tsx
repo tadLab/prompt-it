@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "../i18n/LanguageProvider";
 
 /**
  * The before/after proof. The HERO is the difference in AI *output* — that's the
@@ -29,19 +32,23 @@ const EXAMPLE = {
 };
 
 export default function ExampleSection() {
+  const t = useT();
+  // The subtitle wraps the example request in quotes; split on the token so the
+  // request text can keep its highlight styling inside the translated sentence.
+  const [subBefore, subAfter] = t("example.subtitle").split("{request}");
   return (
     <section id="example" className="scroll-mt-20 py-28 px-6">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-14">
-          <div className="badge inline-block mb-4">See the difference</div>
+          <div className="badge inline-block mb-4">{t("example.badge")}</div>
           <h2 className="text-xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-4">
-            SAME IDEA. DIFFERENT OUTPUT.
+            {t("example.title")}
           </h2>
           <p className="text-white/50 max-w-lg mx-auto">
-            Both started from{" "}
-            <span className="text-white/80">&ldquo;{EXAMPLE.request}&rdquo;</span>. The only thing
-            that changed was the prompt — look at what the AI gave back.
+            {subBefore}
+            <span className="text-white/80">{EXAMPLE.request}</span>
+            {subAfter}
           </p>
         </div>
 
@@ -52,7 +59,7 @@ export default function ExampleSection() {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-red-400 font-bold">✗</span>
               <h3 className="text-sm font-semibold uppercase tracking-wider text-white/70">
-                Vague prompt
+                {t("example.vagueLabel")}
               </h3>
             </div>
             <div className="glass-card p-5">
@@ -65,7 +72,7 @@ export default function ExampleSection() {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-emerald-400 font-bold">✓</span>
               <h3 className="text-sm font-semibold uppercase tracking-wider text-white/70">
-                Structured by prompt it
+                {t("example.structuredLabel")}
               </h3>
             </div>
             <div className="glass-card-bright p-5 space-y-2.5">
@@ -82,7 +89,7 @@ export default function ExampleSection() {
         {/* Arrow connector */}
         <div className="flex items-center justify-center gap-2 text-white/30 text-xs uppercase tracking-widest my-6">
           <span className="h-px w-8 bg-white/15" />
-          AI output
+          {t("example.aiOutput")}
           <span className="h-px w-8 bg-white/15" />
         </div>
 
@@ -94,7 +101,7 @@ export default function ExampleSection() {
               {EXAMPLE.vague.output}
             </p>
             <p className="text-red-400/80 text-xs mt-4 pt-3 border-t border-white/5">
-              Generic, hype-y, interchangeable — reads like every other launch post.
+              {t("example.vagueCaption")}
             </p>
           </div>
 
@@ -104,16 +111,16 @@ export default function ExampleSection() {
               {EXAMPLE.structured.output}
             </p>
             <p className="text-emerald-400/90 text-xs mt-4 pt-3 border-t border-emerald-400/10">
-              Specific hook, a real story, a concrete CTA — a post people actually stop for.
+              {t("example.structuredCaption")}
             </p>
           </div>
         </div>
 
         {/* CTA */}
         <div className="text-center">
-          <p className="text-white/50 mb-4">Your idea deserves the second one.</p>
+          <p className="text-white/50 mb-4">{t("example.ctaText")}</p>
           <Link href="/builder" className="btn-primary inline-flex items-center gap-2">
-            Build my prompt <span className="text-lg">→</span>
+            {t("example.ctaButton")} <span className="text-lg">→</span>
           </Link>
         </div>
       </div>

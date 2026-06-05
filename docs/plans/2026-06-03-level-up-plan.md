@@ -62,9 +62,13 @@ edges are **workflow** (Open in AI, future extension), **niche** (Czech), and
 - [ ] **C5 Iterate / "edit & regenerate"** — already planned as the refine loop (1.4).
 - [ ] **C6 (Growth bet) Chrome extension** — zero copy/paste, runs inside the AI
       tools. The Promptly model. Largest effort; revisit after the web core is strong.
-- [ ] **C7 Czech UI + go-to-market** — localize UI copy (CS/EN toggle or CS default),
-      Czech SEO ("jak napsat lepší prompt" — nobody optimizes for it), Czech socials
-      & communities. Pairs with **1.1b** (bilingual output). Low effort, owns a niche.
+- [~] **C7 Czech UI + go-to-market** — 🟡 **PARTIAL.** Built a lightweight i18n
+      system (`app/i18n/`: `messages.ts` dict + `LanguageProvider` with localStorage
+      persistence + browser-language auto-detect + `EN/CS` switcher in the Header).
+      **Translated:** Header, Footer, landing page, before/after section. Hero
+      headline also forced to one line (`whitespace-nowrap`). SSR-safe default
+      avoids hydration mismatch; verified live (EN↔CS, persistence, no warnings).
+      **Still TODO:** builder + result chrome, history/legal pages, Czech SEO/metadata.
 
 ---
 
