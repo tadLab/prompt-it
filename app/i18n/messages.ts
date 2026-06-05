@@ -119,6 +119,19 @@ const en: Dict = {
   "result.alternatives": "Alternatives",
   "result.langNudge": "AI models handle English prompts better — try the English version.",
 
+  // History
+  "history.title1": "Prompt",
+  "history.title2": "History",
+  "history.subtitle": "View and manage your previously generated prompts",
+  "history.clearAll": "Clear all",
+  "history.emptyTitle": "No prompts yet",
+  "history.emptyDesc": "Your generated prompts will appear here. Start by building your first prompt!",
+  "history.emptyCta": "Build my first prompt",
+  "history.view": "View prompt",
+  "history.collapse": "Collapse",
+  "history.delete": "Delete",
+  "history.why": "Why {model}?",
+
   // Language switcher
   "lang.label": "Language",
 };
@@ -233,6 +246,19 @@ const cs: Dict = {
   "result.openHintIdle": "Zkopírujeme prompt a otevřeme chat — vlož, pokud se nevyplní sám.",
   "result.alternatives": "Alternativy",
   "result.langNudge": "AI modely rozumí anglickým promptům líp — zkus English verzi.",
+
+  // History
+  "history.title1": "Historie",
+  "history.title2": "promptů",
+  "history.subtitle": "Prohlížej a spravuj své dříve vygenerované prompty",
+  "history.clearAll": "Smazat vše",
+  "history.emptyTitle": "Zatím žádné prompty",
+  "history.emptyDesc": "Tvoje vygenerované prompty se objeví tady. Začni vytvořením prvního promptu!",
+  "history.emptyCta": "Vytvořit první prompt",
+  "history.view": "Zobrazit prompt",
+  "history.collapse": "Sbalit",
+  "history.delete": "Smazat",
+  "history.why": "Proč {model}?",
 
   // Language switcher
   "lang.label": "Jazyk",

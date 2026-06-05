@@ -74,6 +74,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Goal exceeds maximum length" }, { status: 400 });
   }
 
+  // The user's selected UI language overrides auto-detection of the goal text.
+  const langName = body.lang === "cs" ? "Czech" : body.lang === "en" ? "English" : null;
+  const userMessage = langName
+    ? `Goal: ${goal}\n\nWrite the questions in ${langName}.`
+    : `Goal: ${goal}`;
+
   try {
     const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
@@ -83,7 +89,7 @@ export async function POST(req: NextRequest) {
       system: SYSTEM_PROMPT,
       tools: [QUESTIONS_TOOL],
       tool_choice: { type: "tool", name: QUESTIONS_TOOL.name },
-      messages: [{ role: "user", content: `Goal: ${goal}` }],
+      messages: [{ role: "user", content: userMessage }],
     });
 
     const toolUse = message.content.find((block) => block.type === "tool_use");

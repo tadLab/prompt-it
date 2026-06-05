@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useHistoryCount } from "../hooks/useHistory";
 import { saveWizardInputs, clearPromptResult, type WizardAnswer } from "../hooks/usePromptStore";
 import Footer from "../components/Footer";
-import { useT, LanguageSwitcher } from "../i18n/LanguageProvider";
+import { useT, useLang, LanguageSwitcher } from "../i18n/LanguageProvider";
 
 interface ClarifyQuestion {
   id: string;
@@ -18,6 +18,7 @@ export default function BuilderPage() {
   const router = useRouter();
   const historyCount = useHistoryCount();
   const t = useT();
+  const { lang } = useLang();
 
   const [phase, setPhase] = useState<"goal" | "questions">("goal");
   const [goal, setGoal] = useState("");
@@ -52,7 +53,7 @@ export default function BuilderPage() {
       const res = await fetch("/api/clarify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: goal.trim() }),
+        body: JSON.stringify({ goal: goal.trim(), lang }),
       });
       const data = await res.json();
       const qs: ClarifyQuestion[] = Array.isArray(data.questions) ? data.questions : [];
@@ -67,7 +68,7 @@ export default function BuilderPage() {
     } finally {
       setLoadingQuestions(false);
     }
-  }, [canContinue, loadingQuestions, goal, generate]);
+  }, [canContinue, loadingQuestions, goal, generate, lang]);
 
   const handleGoalKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

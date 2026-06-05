@@ -23,7 +23,7 @@ import {
   parseStreamedResult,
   hasUsablePrompt,
 } from "../lib/streamResult";
-import { useT } from "../i18n/LanguageProvider";
+import { useT, useLang } from "../i18n/LanguageProvider";
 
 function languageLabel(code?: string): string {
   const map: Record<string, string> = {
@@ -42,6 +42,7 @@ function languageLabel(code?: string): string {
 export default function ResultPage() {
   const router = useRouter();
   const t = useT();
+  const { lang } = useLang();
   const { addEntry } = useHistory();
   const [result, setResult] = useState<PromptResult | null>(null);
   const [copied, setCopied] = useState(false);
@@ -81,7 +82,7 @@ export default function ResultPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(inputs),
+        body: JSON.stringify({ ...inputs, lang }),
       });
       const data = await res.json();
       if (!data?.prompt) throw new Error("empty");
@@ -100,7 +101,7 @@ export default function ResultPage() {
       const res = await fetch("/api/generate-stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(inputs),
+        body: JSON.stringify({ ...inputs, lang }),
       });
       if (!res.ok || !res.body) throw new Error("no stream");
       const reader = res.body.getReader();
@@ -202,7 +203,7 @@ export default function ResultPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refinePrompt: currentText(), feedback: feedback.trim() }),
+        body: JSON.stringify({ refinePrompt: currentText(), feedback: feedback.trim(), lang }),
       });
       if (!res.ok) throw new Error("refine failed");
       const data: PromptResult = await res.json();

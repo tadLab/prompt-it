@@ -5,10 +5,11 @@ import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useHistory, type HistoryEntry } from "../hooks/useHistory";
+import { useT, useLang } from "../i18n/LanguageProvider";
 
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleDateString(locale, {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -26,6 +27,8 @@ function HistoryCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const t = useT();
+  const { lang } = useLang();
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(entry.result.prompt);
@@ -40,7 +43,9 @@ function HistoryCard({
           <p className="text-sm font-medium text-white/90 truncate">
             {entry.inputs.goal ?? entry.inputs.task ?? "Prompt"}
           </p>
-          <p className="text-xs text-white/40 mt-1">{formatDate(entry.createdAt)}</p>
+          <p className="text-xs text-white/40 mt-1">
+            {formatDate(entry.createdAt, lang === "cs" ? "cs-CZ" : "en-US")}
+          </p>
         </div>
         <div className="flex items-center gap-2 ml-4 shrink-0">
           <span className="text-xs text-emerald-400 font-medium">
@@ -57,7 +62,9 @@ function HistoryCard({
             </pre>
           </div>
           <p className="text-xs text-white/40 mb-3">
-            <span className="text-emerald-400">Why {entry.result.recommendedModel}?</span>{" "}
+            <span className="text-emerald-400">
+              {t("history.why", { model: entry.result.recommendedModel })}
+            </span>{" "}
             {entry.result.whyThisModel}
           </p>
         </div>
@@ -69,7 +76,7 @@ function HistoryCard({
           aria-label={expanded ? "Collapse prompt" : "View prompt"}
           className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
         >
-          {expanded ? "Collapse" : "View prompt"}
+          {expanded ? t("history.collapse") : t("history.view")}
         </button>
         <span className="text-white/10">|</span>
         <button
@@ -77,7 +84,7 @@ function HistoryCard({
           aria-label="Copy prompt"
           className="text-xs text-white/40 hover:text-white/60 transition-colors"
         >
-          {copied ? "Copied!" : "Copy"}
+          {copied ? t("result.copied") : t("result.copy")}
         </button>
         <span className="text-white/10">|</span>
         <button
@@ -85,7 +92,7 @@ function HistoryCard({
           aria-label="Delete prompt"
           className="text-xs text-red-400/60 hover:text-red-400 transition-colors"
         >
-          Delete
+          {t("history.delete")}
         </button>
       </div>
     </div>
@@ -94,6 +101,7 @@ function HistoryCard({
 
 export default function HistoryPage() {
   const { history, removeEntry, clearHistory } = useHistory();
+  const t = useT();
 
   return (
     <div className="bg-gradient-main flex flex-col min-h-screen">
@@ -103,10 +111,11 @@ export default function HistoryPage() {
           <div className="flex items-start justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                Prompt <span className="text-gradient-green">History</span>
+                {t("history.title1")}{" "}
+                <span className="text-gradient-green">{t("history.title2")}</span>
               </h1>
               <p className="text-white/40 mt-1">
-                View and manage your previously generated prompts
+                {t("history.subtitle")}
               </p>
             </div>
             {history.length > 0 && (
@@ -114,7 +123,7 @@ export default function HistoryPage() {
                 onClick={clearHistory}
                 className="text-xs text-red-400/60 hover:text-red-400 transition-colors mt-2"
               >
-                Clear all
+                {t("history.clearAll")}
               </button>
             )}
           </div>
@@ -122,13 +131,12 @@ export default function HistoryPage() {
           {history.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-5xl mb-4">📝</div>
-              <h2 className="text-xl font-semibold mb-2">No prompts yet</h2>
+              <h2 className="text-xl font-semibold mb-2">{t("history.emptyTitle")}</h2>
               <p className="text-white/40 mb-6">
-                Your generated prompts will appear here. Start by building your
-                first prompt!
+                {t("history.emptyDesc")}
               </p>
               <Link href="/builder" className="btn-primary">
-                Build my first prompt
+                {t("history.emptyCta")}
               </Link>
             </div>
           ) : (

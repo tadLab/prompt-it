@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
 import { rateLimit, clientKey, tooManyRequests } from "@/lib/rateLimit";
+import { preferredLanguageInstruction } from "@/lib/generation";
 
 const SYSTEM_PROMPT = `You are an expert prompt engineer. Your job is to transform vague user inputs into detailed, actionable prompts that produce excellent AI outputs.
 
@@ -194,11 +195,13 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "user",
-          content: isRefine
-            ? `Here is an existing prompt you produced earlier:\n---\n${refinePrompt}\n---\n\nThe user wants to refine it with this feedback: "${feedback}"\n\nApply the feedback and return an improved version. Keep the overall structure and quality bar; change what the feedback asks for (and whatever is needed to support it). Preserve the bilingual behavior (English + localized).`
-            : isIntake
-            ? buildIntakeContent(intakeGoal, answers)
-            : `Task: ${task}\nContext: ${context}\nOutput format: ${output}\nPreferences: ${preferences}\nRole: ${role}`,
+          content:
+            (isRefine
+              ? `Here is an existing prompt you produced earlier:\n---\n${refinePrompt}\n---\n\nThe user wants to refine it with this feedback: "${feedback}"\n\nApply the feedback and return an improved version. Keep the overall structure and quality bar; change what the feedback asks for (and whatever is needed to support it). Preserve the bilingual behavior (English + localized).`
+              : isIntake
+              ? buildIntakeContent(intakeGoal, answers)
+              : `Task: ${task}\nContext: ${context}\nOutput format: ${output}\nPreferences: ${preferences}\nRole: ${role}`) +
+            preferredLanguageInstruction(body.lang),
         },
       ],
     });

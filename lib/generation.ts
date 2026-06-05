@@ -62,6 +62,18 @@ export interface GenerateBody {
   feedback?: string;
   goal?: string;
   answers?: { question?: string; answer?: string }[];
+  lang?: string; // UI language the user explicitly selected (overrides auto-detect)
+}
+
+const LANG_NAMES: Record<string, string> = { cs: "Czech", en: "English" };
+
+// When the user has explicitly chosen a UI language, that choice is authoritative
+// for the user-facing output — it should NOT be overridden by auto-detecting the
+// goal text (a Czech user typing a short English-looking goal still wants Czech).
+export function preferredLanguageInstruction(lang: unknown): string {
+  const name = typeof lang === "string" ? LANG_NAMES[lang] : undefined;
+  if (!name) return "";
+  return `\n\nIMPORTANT: The user selected ${name} as their language. Write the user-facing prompt in ${name} and set detectedLanguage to "${lang}", regardless of the language of the goal text above.`;
 }
 
 export function classifyRequest(body: GenerateBody) {
@@ -79,8 +91,10 @@ export function classifyRequest(body: GenerateBody) {
 export function buildUserContent(body: GenerateBody): string {
   const { isRefine, isIntake, intakeGoal } = classifyRequest(body);
 
+  const langSuffix = preferredLanguageInstruction(body.lang);
+
   if (isRefine) {
-    return `Here is an existing prompt you produced earlier:\n---\n${body.refinePrompt}\n---\n\nThe user wants to refine it with this feedback: "${body.feedback}"\n\nApply the feedback and return an improved version. Keep the overall structure and quality bar; change what the feedback asks for (and whatever is needed to support it). Preserve the bilingual behavior.`;
+    return `Here is an existing prompt you produced earlier:\n---\n${body.refinePrompt}\n---\n\nThe user wants to refine it with this feedback: "${body.feedback}"\n\nApply the feedback and return an improved version. Keep the overall structure and quality bar; change what the feedback asks for (and whatever is needed to support it). Preserve the bilingual behavior.${langSuffix}`;
   }
 
   if (isIntake) {
@@ -90,8 +104,8 @@ export function buildUserContent(body: GenerateBody): string {
     const qa = answered.length
       ? answered.map((a) => `- ${a.question}: ${a.answer}`).join("\n")
       : "(the user skipped the questions — infer everything you need)";
-    return `The user's goal:\n${intakeGoal}\n\nClarifying answers provided:\n${qa}\n\nBuild the optimized prompt. For anything not specified above, infer sensible, specific defaults and list them in assumptions.`;
+    return `The user's goal:\n${intakeGoal}\n\nClarifying answers provided:\n${qa}\n\nBuild the optimized prompt. For anything not specified above, infer sensible, specific defaults and list them in assumptions.${langSuffix}`;
   }
 
-  return `Task: ${body.task}\nContext: ${body.context}\nOutput format: ${body.output}\nPreferences: ${body.preferences}\nRole: ${body.role}`;
+  return `Task: ${body.task}\nContext: ${body.context}\nOutput format: ${body.output}\nPreferences: ${body.preferences}\nRole: ${body.role}${langSuffix}`;
 }
