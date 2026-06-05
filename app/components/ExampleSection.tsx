@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useT } from "../i18n/LanguageProvider";
+import { useT, useLang } from "../i18n/LanguageProvider";
+import type { Lang } from "../i18n/messages";
 
 /**
  * The before/after proof. The HERO is the difference in AI *output* — that's the
@@ -10,29 +11,57 @@ import { useT } from "../i18n/LanguageProvider";
  * These are real, representative outputs captured once and shown statically —
  * no per-visit API call, so the landing page stays fast and free to serve.
  *
- * To make this resonate more with your audience, swap EXAMPLE for your own
- * favourite real before/after (e.g. an email, a caption, a piece of code).
+ * Structured example content lives here (not in messages.ts) because it's
+ * nested data — arrays of sections + multi-line outputs — which doesn't fit the
+ * flat string dictionary. Keyed by language so it matches the UI toggle.
  */
-const EXAMPLE = {
-  request: "A LinkedIn post about our new app",
-  vague: {
-    prompt: "Write a LinkedIn post about our new app.",
-    output:
-      "We're thrilled to announce our brand-new app! 🎉 It's packed with powerful features designed to boost your productivity and make your life easier. Whether you're a professional or just getting started, our app has something for everyone. Download it today and experience the difference! #productivity #newapp #launch #innovation",
+interface Example {
+  request: string;
+  vague: { prompt: string; output: string };
+  structured: { promptSections: { heading: string; text: string }[]; output: string };
+}
+
+const EXAMPLES: Record<Lang, Example> = {
+  en: {
+    request: "A LinkedIn post about our new app",
+    vague: {
+      prompt: "Write a LinkedIn post about our new app.",
+      output:
+        "We're thrilled to announce our brand-new app! 🎉 It's packed with powerful features designed to boost your productivity and make your life easier. Whether you're a professional or just getting started, our app has something for everyone. Download it today and experience the difference! #productivity #newapp #launch #innovation",
+    },
+    structured: {
+      promptSections: [
+        { heading: "### Role", text: "Senior B2B copywriter specializing in LinkedIn launches." },
+        { heading: "### Goal", text: "Announce an AI productivity app to project managers." },
+        { heading: "### Tone & format", text: "Punchy, hook first. ~120 words. No corporate jargon. One clear CTA." },
+      ],
+      output:
+        "I used to lose 3 hours a week just copy-pasting between tools.\n\nLast week it took 20 minutes.\n\nThat's the reason we built Flowstate — it watches how your tools connect and quietly automates the busywork in between. No setup wizards, no 40-tab dashboards.\n\nWe're opening it to 100 project managers first. Want in? Comment \"flow\" and I'll send you early access. 👇",
+    },
   },
-  structured: {
-    promptSections: [
-      { heading: "### Role", text: "Senior B2B copywriter specializing in LinkedIn launches." },
-      { heading: "### Goal", text: "Announce an AI productivity app to project managers." },
-      { heading: "### Tone & format", text: "Punchy, hook first. ~120 words. No corporate jargon. One clear CTA." },
-    ],
-    output:
-      "I used to lose 3 hours a week just copy-pasting between tools.\n\nLast week it took 20 minutes.\n\nThat's the reason we built Flowstate — it watches how your tools connect and quietly automates the busywork in between. No setup wizards, no 40-tab dashboards.\n\nWe're opening it to 100 project managers first. Want in? Comment \"flow\" and I'll send you early access. 👇",
+  cs: {
+    request: "Příspěvek na LinkedIn o naší nové appce",
+    vague: {
+      prompt: "Napiš příspěvek na LinkedIn o naší nové appce.",
+      output:
+        "S nadšením oznamujeme naši zcela novou appku! 🎉 Je nabitá skvělými funkcemi, které vám zvýší produktivitu a usnadní život. Ať jste profík nebo úplný začátečník, naše appka má něco pro každého. Stáhněte si ji ještě dnes a pocítíte ten rozdíl! #produktivita #novaapp #launch #inovace",
+    },
+    structured: {
+      promptSections: [
+        { heading: "### Role", text: "Seniorní B2B copywriter se specializací na LinkedIn launche." },
+        { heading: "### Cíl", text: "Oznámit AI appku na produktivitu projektovým manažerům." },
+        { heading: "### Tón a formát", text: "Úderně, hook hned na začátku. ~120 slov. Žádný korporátní žargon. Jedna jasná výzva k akci." },
+      ],
+      output:
+        "Každý týden jsem ztrácel 3 hodiny jen přepínáním mezi nástroji.\n\nMinulý týden to zabralo 20 minut.\n\nProto jsme postavili Flowstate — sleduje, jak se tvoje nástroje propojují, a tiše zautomatizuje tu otravnou práci mezi nimi. Žádní průvodci nastavením, žádných 40 otevřených panelů.\n\nOtevíráme to nejdřív 100 projektovým manažerům. Chceš dovnitř? Napiš do komentáře „flow“ a pošlu ti early access. 👇",
+    },
   },
 };
 
 export default function ExampleSection() {
   const t = useT();
+  const { lang } = useLang();
+  const EXAMPLE = EXAMPLES[lang] ?? EXAMPLES.en;
   // The subtitle wraps the example request in quotes; split on the token so the
   // request text can keep its highlight styling inside the translated sentence.
   const [subBefore, subAfter] = t("example.subtitle").split("{request}");
