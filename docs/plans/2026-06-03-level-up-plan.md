@@ -62,13 +62,13 @@ edges are **workflow** (Open in AI, future extension), **niche** (Czech), and
 - [ ] **C5 Iterate / "edit & regenerate"** — already planned as the refine loop (1.4).
 - [ ] **C6 (Growth bet) Chrome extension** — zero copy/paste, runs inside the AI
       tools. The Promptly model. Largest effort; revisit after the web core is strong.
-- [~] **C7 Czech UI + go-to-market** — 🟡 **PARTIAL.** Built a lightweight i18n
-      system (`app/i18n/`: `messages.ts` dict + `LanguageProvider` with localStorage
-      persistence + browser-language auto-detect + `EN/CS` switcher in the Header).
-      **Translated:** Header, Footer, landing page, before/after section. Hero
-      headline also forced to one line (`whitespace-nowrap`). SSR-safe default
-      avoids hydration mismatch; verified live (EN↔CS, persistence, no warnings).
-      **Still TODO:** builder + result chrome, history/legal pages, Czech SEO/metadata.
+- [x] **C7 Czech UI** — ✅ **DONE (full funnel).** Lightweight i18n (`app/i18n/`:
+      `messages.ts` dict + `LanguageProvider` with localStorage persistence +
+      browser-language auto-detect + `EN/CS` switcher). **Translated:** Header,
+      Footer, landing, before/after, **builder, and result** (incl. interpolated
+      strings like "Open in {model}" and split-markup hints). Hero headline forced
+      to one line. SSR-safe (no hydration warnings); verified live in both languages.
+      **Still TODO (go-to-market):** history/legal pages, Czech SEO/metadata, Czech socials.
 
 ---
 

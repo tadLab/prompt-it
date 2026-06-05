@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useHistoryCount } from "../hooks/useHistory";
 import { saveWizardInputs, clearPromptResult, type WizardAnswer } from "../hooks/usePromptStore";
 import Footer from "../components/Footer";
+import { useT, LanguageSwitcher } from "../i18n/LanguageProvider";
 
 interface ClarifyQuestion {
   id: string;
@@ -16,6 +17,7 @@ interface ClarifyQuestion {
 export default function BuilderPage() {
   const router = useRouter();
   const historyCount = useHistoryCount();
+  const t = useT();
 
   const [phase, setPhase] = useState<"goal" | "questions">("goal");
   const [goal, setGoal] = useState("");
@@ -88,18 +90,21 @@ export default function BuilderPage() {
         <Link href="/" className="text-gradient-green text-xl font-bold tracking-tight">
           prompt it
         </Link>
-        <Link
-          href="/history"
-          className="badge flex items-center gap-2 hover:border-emerald-400/40 transition-colors"
-        >
-          <span>📜</span>
-          <span>History</span>
-          {historyCount > 0 && (
-            <span className="bg-emerald-400 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {historyCount}
-            </span>
-          )}
-        </Link>
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher />
+          <Link
+            href="/history"
+            className="badge flex items-center gap-2 hover:border-emerald-400/40 transition-colors"
+          >
+            <span>📜</span>
+            <span>{t("nav.history")}</span>
+            {historyCount > 0 && (
+              <span className="bg-emerald-400 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {historyCount}
+              </span>
+            )}
+          </Link>
+        </div>
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
@@ -107,18 +112,16 @@ export default function BuilderPage() {
           <div className="w-full max-w-xl mx-auto fade-in">
             <div className="text-center mb-6">
               <p className="text-emerald-400 text-xs font-medium tracking-widest mb-2">
-                STEP 1 — YOUR GOAL
+                {t("builder.step1")}
               </p>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                WHAT DO YOU WANT AI TO HELP YOU WITH?
+                {t("builder.goalTitle")}
               </h1>
             </div>
 
             <textarea
               className="prompt-textarea"
-              placeholder={
-                "Napiš blog post na LinkedIn pro náš launch\nHelp me brainstorm React code\nNapiš e-mail šéfovi, kterým odmítnu práci o víkendu…"
-              }
+              placeholder={t("builder.goalPlaceholder")}
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
               onKeyDown={handleGoalKeyDown}
@@ -126,8 +129,8 @@ export default function BuilderPage() {
               rows={6}
             />
             <p className="text-center text-white/30 text-xs mt-3">
-              Press <span className="kbd">Enter</span> to continue •{" "}
-              <span className="kbd">Shift + Enter</span> for new line
+              {t("builder.hintPre")} <span className="kbd">Enter</span> {t("builder.hintMid")} •{" "}
+              <span className="kbd">Shift + Enter</span> {t("builder.hintNewline")}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4">
@@ -136,14 +139,14 @@ export default function BuilderPage() {
                 disabled={!canContinue || loadingQuestions}
                 className="btn-primary"
               >
-                {loadingQuestions ? "Preparing questions…" : "Continue →"}
+                {loadingQuestions ? t("builder.preparing") : t("builder.continue")}
               </button>
               <button
                 onClick={() => generate(false)}
                 disabled={!canContinue || loadingQuestions}
                 className="btn-ghost text-sm"
               >
-                Skip & generate now
+                {t("builder.skip")}
               </button>
             </div>
           </div>
@@ -151,10 +154,10 @@ export default function BuilderPage() {
           <div className="w-full max-w-xl mx-auto fade-in">
             <div className="text-center mb-6">
               <p className="text-emerald-400 text-xs font-medium tracking-widest mb-2">
-                STEP 2 — A FEW QUICK QUESTIONS (OPTIONAL)
+                {t("builder.step2")}
               </p>
               <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-                Answer what you can — we&apos;ll infer the rest.
+                {t("builder.step2Title")}
               </h1>
             </div>
 
@@ -189,7 +192,7 @@ export default function BuilderPage() {
                     type="text"
                     value={answers[q.id] || ""}
                     onChange={(e) => setAnswer(q.id, e.target.value)}
-                    placeholder="Type an answer, or skip…"
+                    placeholder={t("builder.answerPlaceholder")}
                     className="w-full bg-[var(--bg-card)] border border-[var(--border-green)] rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-400 transition-colors"
                   />
                 </div>
@@ -198,13 +201,13 @@ export default function BuilderPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
               <button onClick={() => generate(true)} className="btn-primary">
-                Generate prompt →
+                {t("builder.generate")}
               </button>
               <button
                 onClick={() => setPhase("goal")}
                 className="btn-ghost text-sm"
               >
-                ← Back
+                {t("builder.back")}
               </button>
             </div>
           </div>

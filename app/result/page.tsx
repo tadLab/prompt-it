@@ -23,6 +23,7 @@ import {
   parseStreamedResult,
   hasUsablePrompt,
 } from "../lib/streamResult";
+import { useT } from "../i18n/LanguageProvider";
 
 function languageLabel(code?: string): string {
   const map: Record<string, string> = {
@@ -40,6 +41,7 @@ function languageLabel(code?: string): string {
 
 export default function ResultPage() {
   const router = useRouter();
+  const t = useT();
   const { addEntry } = useHistory();
   const [result, setResult] = useState<PromptResult | null>(null);
   const [copied, setCopied] = useState(false);
@@ -230,7 +232,7 @@ export default function ResultPage() {
             {genError ? (
               <div className="text-center py-20 fade-in">
                 <p className="text-red-400 mb-4">
-                  Something went wrong generating your prompt.
+                  {t("result.error")}
                 </p>
                 <button
                   onClick={() => {
@@ -239,14 +241,14 @@ export default function ResultPage() {
                   }}
                   className="btn-secondary text-sm"
                 >
-                  Try again
+                  {t("result.tryAgain")}
                 </button>
               </div>
             ) : (
               <>
                 <div className="flex items-baseline gap-3 mb-6">
-                  <h1 className="text-3xl font-bold tracking-tight">YOUR PROMPT</h1>
-                  <span className="text-emerald-400/70 text-sm loading-dots">building</span>
+                  <h1 className="text-3xl font-bold tracking-tight">{t("result.title")}</h1>
+                  <span className="text-emerald-400/70 text-sm loading-dots">{t("result.building")}</span>
                 </div>
                 <div className="glass-card-bright p-6 min-h-[300px]">
                   <pre className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
@@ -269,7 +271,7 @@ export default function ResultPage() {
 
   const recommendedId = targetIdForModel(result.recommendedModel);
   const recommendedTarget = recommendedId ? getTarget(recommendedId) : null;
-  const otherTargets = AI_TARGETS.filter((t) => t.id !== recommendedId);
+  const otherTargets = AI_TARGETS.filter((tgt) => tgt.id !== recommendedId);
 
   return (
     <div className="bg-gradient-main flex flex-col min-h-screen">
@@ -277,7 +279,7 @@ export default function ResultPage() {
       <main className="flex-1 pt-24 pb-16 px-6">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl font-bold tracking-tight mb-6">
-            YOUR PROMPT
+            {t("result.title")}
           </h1>
 
           {/* Language tabs — only when we have a localized + English version */}
@@ -307,7 +309,7 @@ export default function ResultPage() {
               </button>
               {activeLang !== "en" && (
                 <span className="text-white/40 text-xs ml-1">
-                  AI modely rozumí anglickým promptům líp — zkus English verzi.
+                  {t("result.langNudge")}
                 </span>
               )}
             </div>
@@ -332,10 +334,10 @@ export default function ResultPage() {
           {/* Actions */}
           <div className="flex flex-wrap items-center gap-3 mb-6">
             <button onClick={handleCopy} aria-label="Copy prompt to clipboard" className="btn-primary text-sm">
-              {copied ? "Copied!" : "Copy"}
+              {copied ? t("result.copied") : t("result.copy")}
             </button>
             <button onClick={handleEdit} aria-label={isEditing ? "Finish editing" : "Edit prompt"} className="btn-secondary text-sm">
-              {isEditing ? "Done" : "Edit"}
+              {isEditing ? t("result.editDone") : t("result.edit")}
             </button>
             <button
               onClick={() => {
@@ -345,10 +347,10 @@ export default function ResultPage() {
               aria-label={showRefine ? "Cancel refine" : "Refine prompt"}
               className="btn-secondary text-sm"
             >
-              {showRefine ? "Cancel" : "Refine"}
+              {showRefine ? t("result.cancel") : t("result.refine")}
             </button>
             <Link href="/" className="btn-ghost text-sm">
-              Home
+              {t("result.home")}
             </Link>
           </div>
 
@@ -359,12 +361,12 @@ export default function ResultPage() {
                 htmlFor="refine-feedback"
                 className="block text-emerald-400 text-xs font-medium tracking-wider mb-2"
               >
-                What should change?
+                {t("result.refineLabel")}
               </label>
               <textarea
                 id="refine-feedback"
                 className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white/90 text-sm outline-none resize-none min-h-[80px] focus:border-emerald-400/40 transition-colors"
-                placeholder="e.g. make it shorter · more technical · add an example · friendlier tone · zaměř se na B2B…"
+                placeholder={t("result.refinePlaceholder")}
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 disabled={refineLoading}
@@ -376,10 +378,10 @@ export default function ResultPage() {
                   disabled={!feedback.trim() || refineLoading}
                   className="btn-primary text-sm"
                 >
-                  {refineLoading ? "Refining…" : "Regenerate"}
+                  {refineLoading ? t("result.refining") : t("result.regenerate")}
                 </button>
                 {refineError && (
-                  <span className="text-red-400 text-xs">Refine failed — try again.</span>
+                  <span className="text-red-400 text-xs">{t("result.refineFailed")}</span>
                 )}
               </div>
             </div>
@@ -389,7 +391,7 @@ export default function ResultPage() {
           {result.assumptions && result.assumptions.length > 0 && (
             <div className="glass-card p-5 mb-10">
               <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-3">
-                What we assumed
+                {t("result.assumptions")}
               </h3>
               <ul className="space-y-1.5">
                 {result.assumptions.map((a, i) => (
@@ -400,8 +402,9 @@ export default function ResultPage() {
                 ))}
               </ul>
               <p className="text-white/40 text-xs mt-3">
-                Something off? Tweak it with{" "}
-                <span className="text-emerald-400">Refine</span> above.
+                {t("result.assumptionsHintPre")}{" "}
+                <span className="text-emerald-400">{t("result.refine")}</span>{" "}
+                {t("result.assumptionsHintPost")}
               </p>
             </div>
           )}
@@ -409,18 +412,18 @@ export default function ResultPage() {
           {/* Recommendations */}
           <div>
             <h2 className="text-xl font-bold tracking-tight mb-4">
-              RECOMMENDATIONS
+              {t("result.recommendations")}
             </h2>
             <div className="glass-card p-6 space-y-4">
               <div>
                 <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-1">
-                  Recommended Model:
+                  {t("result.recommendedModel")}
                 </h3>
                 <p className="text-lg font-bold">{result.recommendedModel}</p>
               </div>
               <div>
                 <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-1">
-                  Why this model?
+                  {t("result.whyModel")}
                 </h3>
                 <p className="text-white/70 text-sm">{result.whyThisModel}</p>
               </div>
@@ -428,7 +431,7 @@ export default function ResultPage() {
               {/* Open in AI — fuses model matching with one-click insert */}
               <div className="pt-4 border-t border-white/10">
                 <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-3">
-                  Open with your prompt
+                  {t("result.openWith")}
                 </h3>
                 <div className="flex flex-wrap items-center gap-3">
                   {recommendedTarget && (
@@ -437,29 +440,29 @@ export default function ResultPage() {
                       aria-label={`Open prompt in ${recommendedTarget.label}`}
                       className="btn-primary text-sm"
                     >
-                      Open in {recommendedTarget.label} →
+                      {t("result.openIn", { model: recommendedTarget.label })}
                     </button>
                   )}
-                  {(recommendedTarget ? otherTargets : AI_TARGETS).map((t) => (
+                  {(recommendedTarget ? otherTargets : AI_TARGETS).map((tgt) => (
                     <button
-                      key={t.id}
-                      onClick={() => handleOpenIn(t)}
-                      aria-label={`Open prompt in ${t.label}`}
+                      key={tgt.id}
+                      onClick={() => handleOpenIn(tgt)}
+                      aria-label={`Open prompt in ${tgt.label}`}
                       className="btn-secondary text-sm"
                     >
-                      {t.label}
+                      {tgt.label}
                     </button>
                   ))}
                 </div>
                 <p className="text-white/40 text-xs mt-3">
                   {openedTarget
-                    ? "Prompt copied — if it didn't pre-fill, just paste (⌘/Ctrl + V)."
-                    : "We copy your prompt and open the chat — paste if it doesn't auto-fill."}
+                    ? t("result.openHintCopied")
+                    : t("result.openHintIdle")}
                 </p>
               </div>
 
               <div>
-                <h3 className="text-sm font-bold mb-2">Alternatives</h3>
+                <h3 className="text-sm font-bold mb-2">{t("result.alternatives")}</h3>
                 <ul className="space-y-1">
                   {result.alternatives.map((alt) => (
                     <li key={alt} className="text-white/60 text-sm">
