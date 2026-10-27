@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import CursorGlow from "./components/CursorGlow";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/next";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import "./globals.css";
 
