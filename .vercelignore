@@ -1,0 +1,9 @@
+node_modules
+.next
+.next-preview-cache
+.env*
+*.tsbuildinfo
+artifacts
+promo
+identity
+.DS_Store

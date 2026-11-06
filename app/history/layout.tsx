@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   description: "View and manage your previously generated prompts.",
 };
 
-export default function HistoryLayout({ children }: { children: React.ReactNode }) {
+export default function HistoryLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return children;
 }

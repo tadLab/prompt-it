@@ -1,119 +1,80 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useHistoryCount } from "../hooks/useHistory";
-import { useT, LanguageSwitcher } from "../i18n/LanguageProvider";
-
+import { LanguageSwitcher, useLang } from "../i18n/LanguageProvider";
+import Brand from "./Brand";
+import Icon from "./Icon";
 export default function Header() {
+  const [open, setOpen] = useState(false);
+  const { lang } = useLang();
+  const cs = lang === "cs";
   const pathname = usePathname();
-  const isBuilder = pathname === "/builder";
-  const count = useHistoryCount();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const t = useT();
-
-  if (isBuilder) return null;
-
-  const anchor = (hash: string) => pathname === "/" ? hash : `/${hash}`;
-
-  const navLinks = (
-    <>
-      <a
-        href={anchor("#about")}
-        className="text-sm text-white/60 hover:text-white transition-colors"
-        onClick={() => setMenuOpen(false)}
-      >
-        {t("nav.about")}
-      </a>
-      <a
-        href={anchor("#example")}
-        className="text-sm text-white/60 hover:text-white transition-colors"
-        onClick={() => setMenuOpen(false)}
-      >
-        {t("nav.example")}
-      </a>
-      <a
-        href={anchor("#how-it-works")}
-        className="text-sm text-white/60 hover:text-white transition-colors"
-        onClick={() => setMenuOpen(false)}
-      >
-        {t("nav.howItWorks")}
-      </a>
-    </>
-  );
-
+  const links = [
+    { href: "/#how-it-works", label: cs ? "Jak to funguje" : "How it works" },
+    { href: "/#examples", label: cs ? "Inspirace" : "Use cases" },
+    { href: "/history", label: cs ? "Historie" : "Your history" },
+  ];
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between">
-      <Link href="/" className="text-gradient-green text-xl font-bold tracking-tight">
-        prompt it
-      </Link>
-
-      {/* Desktop nav */}
-      <nav className="hidden md:flex items-center gap-6">
-        {navLinks}
-        <Link
-          href="/history"
-          className="text-sm text-white/60 hover:text-white transition-colors flex items-center gap-2"
+    <header
+      className="site-header"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setOpen(false);
+      }}
+    >
+      <div className="nav-inner">
+        <Brand />
+        <nav
+          className="desktop-nav"
+          aria-label={cs ? "Hlavní navigace" : "Main navigation"}
         >
-          {t("nav.history")}
-          {count > 0 && (
-            <span className="bg-emerald-400 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-              {count}
-            </span>
-          )}
-        </Link>
-        <LanguageSwitcher />
-        <Link href="/builder" className="btn-primary text-sm !px-4 !py-1.5 rounded-full">
-          {t("nav.build")}
-        </Link>
-      </nav>
-
-      {/* Mobile: switcher + hamburger */}
-      <div className="flex items-center gap-3 md:hidden">
-        <LanguageSwitcher />
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="text-white/60 hover:text-white text-2xl"
-          aria-label="Toggle menu"
-        >
-          {menuOpen ? "\u2715" : "\u2630"}
-        </button>
-      </div>
-
-      {/* Mobile overlay */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-40 bg-[#0a1a14]/95 backdrop-blur-sm flex flex-col items-center justify-center gap-8 md:hidden">
-          <button
-            onClick={() => setMenuOpen(false)}
-            className="absolute top-4 right-6 text-white/60 hover:text-white text-2xl"
-            aria-label="Close menu"
-          >
-            {"\u2715"}
-          </button>
-          <nav className="flex flex-col items-center gap-6 text-lg">
-            {navLinks}
+          {links.map((l) => (
             <Link
-              href="/history"
-              className="text-white/60 hover:text-white transition-colors flex items-center gap-2"
-              onClick={() => setMenuOpen(false)}
+              key={l.href}
+              href={l.href}
+              aria-current={pathname === l.href ? "page" : undefined}
             >
-              {t("nav.history")}
-              {count > 0 && (
-                <span className="bg-emerald-400 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {count}
-                </span>
-              )}
+              {l.label}
             </Link>
-          </nav>
+          ))}
+        </nav>
+        <div className="nav-actions">
+          <LanguageSwitcher />
           <Link
             href="/builder"
-            className="btn-primary text-base !px-6 !py-2.5 rounded-full mt-2"
-            onClick={() => setMenuOpen(false)}
+            className="button button-small button-light header-cta"
           >
-            {t("nav.build")}
+            {cs ? "Začít zdarma" : "Start creating"}
+            <Icon name="up-right" size={14} />
           </Link>
+          <button
+            className="icon-button menu-button"
+            aria-label={cs ? "Nabídka" : "Toggle menu"}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            onClick={() => setOpen(!open)}
+          >
+            <Icon name={open ? "close" : "menu"} />
+          </button>
         </div>
+      </div>
+      {open && (
+        <nav
+          id="mobile-nav"
+          className="mobile-nav"
+          aria-label={cs ? "Mobilní navigace" : "Mobile navigation"}
+        >
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} onClick={() => setOpen(false)}>
+              {l.label}
+              <Icon name="up-right" size={16} />
+            </Link>
+          ))}
+          <Link href="/builder" onClick={() => setOpen(false)}>
+            {cs ? "Vytvořit prompt" : "Start creating"}
+            <Icon name="arrow" />
+          </Link>
+        </nav>
       )}
     </header>
   );

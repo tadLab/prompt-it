@@ -12,6 +12,7 @@ export interface WizardAnswer {
 export interface WizardInputs {
   goal: string;
   answers: WizardAnswer[];
+  lang?: "en" | "cs";
 }
 
 export interface PromptResult {
@@ -25,7 +26,8 @@ export interface PromptResult {
   recommendedModel: string;
   whyThisModel: string;
   alternatives: string[];
-  generationId?: string;  // Added for rating system
+  generationId?: string; // Added for rating system
+  historyId?: string;
 }
 
 const EMPTY_INPUTS: WizardInputs = { goal: "", answers: [] };
@@ -42,6 +44,8 @@ export function getWizardInputs(): WizardInputs {
     return {
       goal: typeof parsed.goal === "string" ? parsed.goal : "",
       answers: Array.isArray(parsed.answers) ? parsed.answers : [],
+      lang:
+        parsed.lang === "cs" ? "cs" : parsed.lang === "en" ? "en" : undefined,
     };
   } catch {
     return { ...EMPTY_INPUTS };

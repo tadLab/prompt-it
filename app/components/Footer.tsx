@@ -1,35 +1,47 @@
 "use client";
-
 import Link from "next/link";
-import { useT } from "../i18n/LanguageProvider";
-
+import Brand from "./Brand";
+import { useLang } from "../i18n/LanguageProvider";
 export default function Footer() {
-  const t = useT();
+  const { lang } = useLang();
+  const cs = lang === "cs";
   return (
-    <footer className="border-t border-white/5 px-6 py-4 flex items-center justify-between">
-      <div className="text-sm text-white/40">
-        {t("footer.madeBy")}{" "}
-        <Link
-          href="https://tadeasn.com"
-          target="_blank"
-          className="text-emerald-400 hover:text-emerald-300 transition-colors"
-        >
-          Tade
-        </Link>
+    <footer className="site-footer">
+      <div className="footer-top">
+        <div>
+          <Brand />
+          <p>
+            {cs
+              ? "Dobré nápady si zaslouží lepší prompty."
+              : "Good ideas deserve better prompts."}
+          </p>
+        </div>
+        <div className="footer-links">
+          <Link href="/#examples">{cs ? "Inspirace" : "Use cases"}</Link>
+          <Link href="/history">{cs ? "Historie" : "History"}</Link>
+          <Link href="/builder">
+            {cs ? "Vytvořit prompt" : "Create a prompt"} ↗
+          </Link>
+        </div>
       </div>
-      <div className="flex items-center gap-4">
-        <Link
-          href="/terms"
-          className="text-sm text-white/40 hover:text-white/60 transition-colors"
-        >
-          {t("footer.terms")}
-        </Link>
-        <Link
-          href="/privacy"
-          className="text-sm text-white/40 hover:text-white/60 transition-colors"
-        >
-          {t("footer.privacy")}
-        </Link>
+      <div className="footer-bottom">
+        <span>
+          © {new Date().getFullYear()} makebetterprompt{" "}
+          <span className="footer-credit">
+            {cs ? "· Vytvořil" : "· Made by"}{" "}
+            <a href="https://tadeasn.com" target="_blank" rel="noreferrer">
+              Tade ↗
+            </a>
+          </span>
+        </span>
+        <div>
+          <Link href="/privacy">{cs ? "Soukromí" : "Privacy"}</Link>
+          <Link href="/terms">{cs ? "Podmínky" : "Terms"}</Link>
+          <span className="footer-status">
+            <i />
+            {cs ? "Připraveno pro tvůj nápad" : "Ready for your next idea"}
+          </span>
+        </div>
       </div>
     </footer>
   );

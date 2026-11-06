@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import type { PromptResult } from "./usePromptStore";
 
 export interface HistoryEntry {
   id: string;
@@ -8,6 +9,7 @@ export interface HistoryEntry {
   inputs: {
     goal?: string;
     answers?: { question: string; answer: string }[];
+    lang?: "en" | "cs";
     // Legacy entries (created before the adaptive intake) used these fields.
     task?: string;
     context?: string;
@@ -15,12 +17,7 @@ export interface HistoryEntry {
     preferences?: string;
     role?: string;
   };
-  result: {
-    prompt: string;
-    recommendedModel: string;
-    whyThisModel: string;
-    alternatives: string[];
-  };
+  result: PromptResult;
 }
 
 const STORAGE_KEY = "prompt-it-history";
@@ -29,7 +26,10 @@ function getHistory(): HistoryEntry[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((e) => e?.id && typeof e?.result?.prompt === "string")
+      : [];
   } catch {
     return [];
   }
@@ -42,17 +42,20 @@ export function useHistory() {
     setHistory(getHistory());
   }, []);
 
-  const addEntry = useCallback((entry: Omit<HistoryEntry, "id" | "createdAt">) => {
-    const newEntry: HistoryEntry = {
-      ...entry,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    const updated = [newEntry, ...getHistory()];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    setHistory(updated);
-    return newEntry;
-  }, []);
+  const addEntry = useCallback(
+    (entry: Omit<HistoryEntry, "id" | "createdAt">) => {
+      const newEntry: HistoryEntry = {
+        ...entry,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      };
+      const updated = [newEntry, ...getHistory()].slice(0, 100);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      setHistory(updated);
+      return newEntry;
+    },
+    [],
+  );
 
   const removeEntry = useCallback((id: string) => {
     const updated = getHistory().filter((e) => e.id !== id);
@@ -65,7 +68,15 @@ export function useHistory() {
     setHistory([]);
   }, []);
 
-  return { history, addEntry, removeEntry, clearHistory };
+  const updateEntry = useCallback((id: string, result: PromptResult) => {
+    const updated = getHistory().map((entry) =>
+      entry.id === id ? { ...entry, result } : entry,
+    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    setHistory(updated);
+  }, []);
+
+  return { history, addEntry, updateEntry, removeEntry, clearHistory };
 }
 
 export function useHistoryCount() {

@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   description: "Create structured AI prompts with our step-by-step wizard.",
 };
 
-export default function BuilderLayout({ children }: { children: React.ReactNode }) {
+export default function BuilderLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return children;
 }

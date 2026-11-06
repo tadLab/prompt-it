@@ -1,48 +1,45 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
-import CursorGlow from "./components/CursorGlow";
+import { Manrope, IBM_Plex_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
-import { LanguageProvider } from "./i18n/LanguageProvider";
+import { LanguageProvider, SkipLink } from "./i18n/LanguageProvider";
 import "./globals.css";
-
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist",
+const sans = Manrope({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-sans",
 });
-
+const mono = IBM_Plex_Mono({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500"],
+  variable: "--font-mono",
+});
 export const metadata: Metadata = {
   title: {
-    default: "prompt it — Build better prompts. Get better AI results.",
-    template: "%s | prompt it",
+    default: "makebetterprompt — Your idea. Clearly expressed.",
+    template: "%s | makebetterprompt",
   },
   description:
-    "Engineer prompts that AI actually understands. We turn your idea into a structured prompt and recommend the best AI model for it.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://promptit.app"),
+    "Turn a rough idea into a clear, useful AI prompt. Create, refine, and use your prompts in ChatGPT, Claude, or Gemini. Free, in English and Czech.",
+  metadataBase: new URL("https://makebetterprompt.com"),
   openGraph: {
-    title: "prompt it — Build better prompts. Get better AI results.",
-    description: "Engineer prompts that AI actually understands.",
+    title: "Your idea. Clearly expressed.",
+    description: "Better prompts start here. Meet the new makebetterprompt.",
     type: "website",
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "prompt it — Build better prompts. Get better AI results.",
-    description: "Engineer prompts that AI actually understands.",
-  },
+  icons: { icon: "/brand/mark.svg" },
 };
-
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body className={`${geist.variable} font-sans antialiased`}>
+      <body className={`${sans.variable} ${mono.variable}`}>
         <LanguageProvider>
-          <CursorGlow />
+          <SkipLink />
           {children}
-          <Analytics />
         </LanguageProvider>
+        <Analytics />
       </body>
     </html>
   );

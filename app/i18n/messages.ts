@@ -41,22 +41,29 @@ const en: Dict = {
   "about.p2":
     "prompt it bridges that gap. You describe what you need in plain language, and our AI transforms it into a structured prompt — complete with context, constraints, output format, and a recommended model.",
   "about.feat1.title": "Structured output",
-  "about.feat1.desc": "Role, goal, context, format — every prompt follows a proven framework.",
+  "about.feat1.desc":
+    "Role, goal, context, format — every prompt follows a proven framework.",
   "about.feat2.title": "Model matching",
-  "about.feat2.desc": "We recommend the best AI model for your specific use case.",
+  "about.feat2.desc":
+    "We recommend the best AI model for your specific use case.",
   "about.feat3.title": "For everyone",
-  "about.feat3.desc": "Marketers, developers, writers — no prompt engineering skills needed.",
+  "about.feat3.desc":
+    "Marketers, developers, writers — no prompt engineering skills needed.",
 
   // How it works
   "how.badge": "Simple 3-step process",
   "how.title": "HOW IT WORKS",
-  "how.subtitle": "From idea to optimized prompt in seconds — no prompt engineering skills required.",
+  "how.subtitle":
+    "From idea to optimized prompt in seconds — no prompt engineering skills required.",
   "how.step1.title": "Describe",
-  "how.step1.desc": "Tell us what you need in plain language — your goal, audience, and desired output.",
+  "how.step1.desc":
+    "Tell us what you need in plain language — your goal, audience, and desired output.",
   "how.step2.title": "Generate",
-  "how.step2.desc": "Our AI structures your idea into an optimized prompt with the best model recommendation.",
+  "how.step2.desc":
+    "Our AI structures your idea into an optimized prompt with the best model recommendation.",
   "how.step3.title": "Use",
-  "how.step3.desc": "Copy the prompt and paste it into ChatGPT, Claude, Gemini, or any AI — and get better results.",
+  "how.step3.desc":
+    "Copy the prompt and paste it into ChatGPT, Claude, Gemini, or any AI — and get better results.",
 
   // Example section
   "example.badge": "See the difference",
@@ -66,7 +73,8 @@ const en: Dict = {
   "example.vagueLabel": "Vague prompt",
   "example.structuredLabel": "Structured by prompt it",
   "example.aiOutput": "AI output",
-  "example.vagueCaption": "Generic, hype-y, interchangeable — reads like every other launch post.",
+  "example.vagueCaption":
+    "Generic, hype-y, interchangeable — reads like every other launch post.",
   "example.structuredCaption":
     "Specific hook, a real story, a concrete CTA — a post people actually stop for.",
   "example.ctaText": "Your idea deserves the second one.",
@@ -102,7 +110,8 @@ const en: Dict = {
   "result.cancel": "Cancel",
   "result.home": "Home",
   "result.refineLabel": "What should change?",
-  "result.refinePlaceholder": "e.g. make it shorter · more technical · add an example · friendlier tone…",
+  "result.refinePlaceholder":
+    "e.g. make it shorter · more technical · add an example · friendlier tone…",
   "result.regenerate": "Regenerate",
   "result.refining": "Refining…",
   "result.refineFailed": "Refine failed — try again.",
@@ -114,10 +123,13 @@ const en: Dict = {
   "result.whyModel": "Why this model?",
   "result.openWith": "Open with your prompt",
   "result.openIn": "Open in {model} →",
-  "result.openHintCopied": "Prompt copied — if it didn't pre-fill, just paste (⌘/Ctrl + V).",
-  "result.openHintIdle": "We copy your prompt and open the chat — paste if it doesn't auto-fill.",
+  "result.openHintCopied":
+    "Prompt copied — if it didn't pre-fill, just paste (⌘/Ctrl + V).",
+  "result.openHintIdle":
+    "We copy your prompt and open the chat — paste if it doesn't auto-fill.",
   "result.alternatives": "Alternatives",
-  "result.langNudge": "AI models handle English prompts better — try the English version.",
+  "result.langNudge":
+    "AI models handle English prompts better — try the English version.",
 
   // History
   "history.title1": "Prompt",
@@ -125,7 +137,8 @@ const en: Dict = {
   "history.subtitle": "View and manage your previously generated prompts",
   "history.clearAll": "Clear all",
   "history.emptyTitle": "No prompts yet",
-  "history.emptyDesc": "Your generated prompts will appear here. Start by building your first prompt!",
+  "history.emptyDesc":
+    "Your generated prompts will appear here. Start by building your first prompt!",
   "history.emptyCta": "Build my first prompt",
   "history.view": "View prompt",
   "history.collapse": "Collapse",
@@ -169,22 +182,28 @@ const cs: Dict = {
   "about.p2":
     "prompt it ten rozdíl překlene. Popíšeš, co potřebuješ, běžnou řečí — a naše AI to promění ve strukturovaný prompt s kontextem, omezeními, formátem výstupu i doporučeným modelem.",
   "about.feat1.title": "Strukturovaný výstup",
-  "about.feat1.desc": "Role, cíl, kontext, formát — každý prompt drží osvědčenou strukturu.",
+  "about.feat1.desc":
+    "Role, cíl, kontext, formát — každý prompt drží osvědčenou strukturu.",
   "about.feat2.title": "Výběr modelu",
   "about.feat2.desc": "Doporučíme nejlepší AI model přesně pro tvůj případ.",
   "about.feat3.title": "Pro každého",
-  "about.feat3.desc": "Marketéři, vývojáři, autoři — žádné znalosti prompt engineeringu netřeba.",
+  "about.feat3.desc":
+    "Marketéři, vývojáři, autoři — žádné znalosti prompt engineeringu netřeba.",
 
   // How it works
   "how.badge": "Jednoduché 3 kroky",
   "how.title": "JAK TO FUNGUJE",
-  "how.subtitle": "Z nápadu na optimalizovaný prompt během vteřin — bez znalostí prompt engineeringu.",
+  "how.subtitle":
+    "Z nápadu na optimalizovaný prompt během vteřin — bez znalostí prompt engineeringu.",
   "how.step1.title": "Popiš",
-  "how.step1.desc": "Řekni nám, co potřebuješ, běžnou řečí — cíl, publikum a požadovaný výstup.",
+  "how.step1.desc":
+    "Řekni nám, co potřebuješ, běžnou řečí — cíl, publikum a požadovaný výstup.",
   "how.step2.title": "Vygeneruj",
-  "how.step2.desc": "Naše AI z tvého nápadu poskládá optimalizovaný prompt a doporučí nejlepší model.",
+  "how.step2.desc":
+    "Naše AI z tvého nápadu poskládá optimalizovaný prompt a doporučí nejlepší model.",
   "how.step3.title": "Použij",
-  "how.step3.desc": "Zkopíruj prompt a vlož ho do ChatGPT, Claude, Gemini nebo jakékoli AI — a získej lepší výsledky.",
+  "how.step3.desc":
+    "Zkopíruj prompt a vlož ho do ChatGPT, Claude, Gemini nebo jakékoli AI — a získej lepší výsledky.",
 
   // Example section
   "example.badge": "Viz rozdíl",
@@ -194,7 +213,8 @@ const cs: Dict = {
   "example.vagueLabel": "Vágní prompt",
   "example.structuredLabel": "Strukturováno přes prompt it",
   "example.aiOutput": "Výstup AI",
-  "example.vagueCaption": "Obecné, nadšenecké, zaměnitelné — čte se jako každý druhý launch příspěvek.",
+  "example.vagueCaption":
+    "Obecné, nadšenecké, zaměnitelné — čte se jako každý druhý launch příspěvek.",
   "example.structuredCaption":
     "Konkrétní hook, skutečný příběh, jasná výzva k akci — příspěvek, u kterého lidi fakt zastaví.",
   "example.ctaText": "Tvůj nápad si zaslouží ten druhý.",
@@ -230,7 +250,8 @@ const cs: Dict = {
   "result.cancel": "Zrušit",
   "result.home": "Domů",
   "result.refineLabel": "Co změnit?",
-  "result.refinePlaceholder": "např. zkrať to · víc technicky · přidej příklad · přátelštější tón…",
+  "result.refinePlaceholder":
+    "např. zkrať to · víc technicky · přidej příklad · přátelštější tón…",
   "result.regenerate": "Přegenerovat",
   "result.refining": "Vylepšuju…",
   "result.refineFailed": "Vylepšení selhalo — zkus znovu.",
@@ -242,10 +263,13 @@ const cs: Dict = {
   "result.whyModel": "Proč tenhle model?",
   "result.openWith": "Otevřít s tvým promptem",
   "result.openIn": "Otevřít v {model} →",
-  "result.openHintCopied": "Prompt zkopírován — pokud se nepředvyplnil, jen vlož (⌘/Ctrl + V).",
-  "result.openHintIdle": "Zkopírujeme prompt a otevřeme chat — vlož, pokud se nevyplní sám.",
+  "result.openHintCopied":
+    "Prompt zkopírován — pokud se nepředvyplnil, jen vlož (⌘/Ctrl + V).",
+  "result.openHintIdle":
+    "Zkopírujeme prompt a otevřeme chat — vlož, pokud se nevyplní sám.",
   "result.alternatives": "Alternativy",
-  "result.langNudge": "AI modely rozumí anglickým promptům líp — zkus English verzi.",
+  "result.langNudge":
+    "AI modely rozumí anglickým promptům líp — zkus English verzi.",
 
   // History
   "history.title1": "Historie",
@@ -253,7 +277,8 @@ const cs: Dict = {
   "history.subtitle": "Prohlížej a spravuj své dříve vygenerované prompty",
   "history.clearAll": "Smazat vše",
   "history.emptyTitle": "Zatím žádné prompty",
-  "history.emptyDesc": "Tvoje vygenerované prompty se objeví tady. Začni vytvořením prvního promptu!",
+  "history.emptyDesc":
+    "Tvoje vygenerované prompty se objeví tady. Začni vytvořením prvního promptu!",
   "history.emptyCta": "Vytvořit první prompt",
   "history.view": "Zobrazit prompt",
   "history.collapse": "Sbalit",

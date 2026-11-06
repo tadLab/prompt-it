@@ -3,6 +3,25 @@ import type { PromptResult } from "../hooks/usePromptStore";
 // The streaming response is "prompt prose" + a sentinel + a JSON metadata line.
 export const META_SENTINEL = "===META===";
 
+/** Incomplete streams must never be saved as finished generations. */
+export function isCompleteStream(text: string): boolean {
+  const index = text.indexOf(META_SENTINEL);
+  if (index < 1 || text.includes("===ERROR===")) return false;
+  try {
+    const meta = JSON.parse(text.slice(index + META_SENTINEL.length).trim());
+    return (
+      !!meta &&
+      typeof meta.detectedLanguage === "string" &&
+      ["Claude", "ChatGPT", "Gemini"].includes(meta.recommendedModel) &&
+      typeof meta.whyThisModel === "string" &&
+      (meta.detectedLanguage === "en" ||
+        (typeof meta.promptEnglish === "string" && !!meta.promptEnglish.trim()))
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** The visible prompt text so far (everything before the sentinel). */
 export function promptBeforeMeta(buffer: string): string {
   const idx = buffer.indexOf(META_SENTINEL);
@@ -38,7 +57,9 @@ export function parseStreamedResult(fullText: string): PromptResult {
     }
   }
 
-  const isEnglish = (meta.detectedLanguage || "en").toLowerCase().startsWith("en");
+  const isEnglish = (meta.detectedLanguage || "en")
+    .toLowerCase()
+    .startsWith("en");
 
   return {
     prompt: promptPart,

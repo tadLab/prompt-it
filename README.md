@@ -1,65 +1,53 @@
-# Prompt It
+# makebetterprompt
 
-Turn a vague idea into a structured, expert-level AI prompt. You answer a short
-5-step wizard; Prompt It expands it into a detailed prompt and recommends which
-AI model (Claude / ChatGPT / Gemini) to run it on.
+An English/Czech prompt workspace with a custom emerald identity. This copy preserves the existing Anthropic-backed service and local browser history keys.
 
-Free, no account, no database — your history lives in your own browser.
+## Production release · 30 September 2026
 
-## Stack
+- Live: https://makebetterprompt.com
+- Vercel project: `tadlabs-projects/prompt-it-app`
+- Deployment: `dpl_8jxUtM6ztbCWTjiHHCfnUHDSsUUU`
+- Immutable URL: https://prompt-it-egnwrdobl-tadlabs-projects.vercel.app
+- Verification: 32 tests passed, TypeScript passed, Next.js production build passed, homepage HTTP 200, Czech clarification and streaming generation HTTP 200, EN/CZ UI checked on the public domain. Runtime error query returned no matching logs.
+- Prior release / rollback target: https://prompt-it-m8887dhec-tadlabs-projects.vercel.app
 
-- **Next.js 15** (App Router) + **React 19** + **TypeScript**
-- **Tailwind CSS 4**
-- **Anthropic Claude API** (`@anthropic-ai/sdk`) for prompt generation
-- **Vercel Analytics**
+This release was originally deployed directly from a local workspace, without syncing the redesign to GitHub. A Git-backed redeployment on 6 November 2026 therefore restored the old design. The September deployment was promoted again, and this source sync brings the emerald redesign into the repository while preserving the newer `@vercel/analytics/next` integration. The promo video was not embedded or published to social media as part of deployment.
 
-## How it works
+## Release workflow
 
-```
-/builder            5-step wizard (task, context, output, preferences, role)
-   ↓                wizard state kept in sessionStorage
-/loading-prompt     POSTs the inputs to /api/generate
-   ↓
-/api/generate       calls Claude with an "expert prompt engineer" system prompt,
-   ↓                returns { prompt, recommendedModel, whyThisModel, alternatives }
-/result             shows the prompt + model recommendation; copy / edit
-                    history saved to localStorage
-```
+Treat `tadLab/prompt-it` on GitHub as the source of truth. Commit and verify design changes there before releasing; Vercel builds `main` for production. Do not publish a local-only redesign and leave `main` on an older UI.
 
-The API route ([app/api/generate/route.ts](app/api/generate/route.ts)) degrades
-gracefully: if the model returns malformed JSON or the API call fails, it falls
-back to a locally-generated structured prompt so the user never sees an error.
+Before merging a release, run `npm test`, `npm run typecheck`, and `npm run build`. Review the preview, then verify the production domain after Vercel finishes. `__tests__/brand-release.test.ts` checks the homepage identity, green theme, brand assets, and analytics integration to catch an accidental reversion.
 
-## Run locally
+## Run
 
-```bash
-npm install
-npm run dev        # http://localhost:3000
-```
+1. `npm ci`
+2. Copy `.env.example` to `.env.local` and set your Anthropic API key.
+3. `npm run dev`
 
-Create `.env.local`:
+## Verify
 
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
 
-## Scripts
+Stop the development server before a production build: Next.js 15 shares the `.next` output directory between them. Fonts are downloaded at build time and self-hosted by Next.js; the build needs network access on a cold cache.
 
-| Command | Does |
-|---|---|
-| `npm run dev` | Dev server (Turbopack) |
-| `npm run build` | Production build |
-| `npm run start` | Serve the production build |
-| `npm test` | Run the prompt-quality test suite (Vitest) |
-| `npm run lint` | Lint |
+## Product flow
 
-## Tests
+The homepage sends an idea straight to generation, or into an optional 0–2-question intake. Both API routes share the same proportional-length, no-invented-facts generation contract. Results stream live and are saved only after valid completion metadata arrives. Users can edit either translation, refine, undo the last change, download, copy, or open an AI tool. AI handoff deliberately copies then opens: URL prefill behavior is not assumed across providers.
 
-[`__tests__/prompt-quality.test.ts`](__tests__/prompt-quality.test.ts) are
-differential tests: they assert that an *enriched* prompt is structurally richer
-than the *naive* input (≥6 sections, ≥5 requirement bullets, 10×+ word count),
-rather than checking exact strings.
+Browser storage retains the last 100 prompts. No registration or new external service was introduced. Legacy keys remain so existing history can survive an in-place rollout.
 
-## Roadmap
+## Identity
 
-See [docs/plans/2026-06-03-level-up-plan.md](docs/plans/2026-06-03-level-up-plan.md).
+See `identity/BRAND.md`. Editable SVGs are in `public/brand/`. App icon, Apple icon, and Open Graph PNGs are rendered by Next.js from the new identity.
+
+## Public launch checks
+
+- Review the visual direction and actual EN/CZ wording.
+- Verify production Anthropic credentials and billing.
+- Review the existing legal policy contents with the owner; translations are not a compliance audit.
+- The inherited rate limiter is in-memory per instance, not a distributed abuse-control system. Review production capacity before a large public launch.
+- Confirm hosting/log retention matches the privacy policy.
+- Further production releases require approval. This workspace is linked to the existing live Vercel project.

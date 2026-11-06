@@ -12,7 +12,9 @@ const CS = `### Role\nJsi copywriter.\n${META_SENTINEL}\n{"detectedLanguage":"cs
 
 describe("promptBeforeMeta (streaming display)", () => {
   it("returns everything before the sentinel while streaming", () => {
-    expect(promptBeforeMeta("### Role\npartial promp")).toContain("partial promp");
+    expect(promptBeforeMeta("### Role\npartial promp")).toContain(
+      "partial promp",
+    );
   });
   it("stops at the sentinel once it appears", () => {
     expect(promptBeforeMeta(EN)).not.toContain(META_SENTINEL);
@@ -39,7 +41,9 @@ describe("parseStreamedResult", () => {
   });
 
   it("malformed/empty metadata degrades gracefully but keeps the prompt", () => {
-    const r = parseStreamedResult(`### Role\nSomething useful.\n${META_SENTINEL}\n{not json`);
+    const r = parseStreamedResult(
+      `### Role\nSomething useful.\n${META_SENTINEL}\n{not json`,
+    );
     expect(r.prompt).toContain("Something useful.");
     expect(r.recommendedModel).toBe("Claude"); // default
     expect(r.alternatives.length).toBe(2);

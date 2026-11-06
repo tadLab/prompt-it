@@ -8,7 +8,7 @@ import { rateLimit, clientKey, tooManyRequests } from "@/lib/rateLimit";
 // same thing. Attacks underspecification, the #1 prompting failure mode.
 const SYSTEM_PROMPT = `You are an expert prompt engineer running a quick intake.
 
-The user gives you a rough goal. Generate 3–5 SHORT clarifying questions whose answers would most improve the final prompt. Rules:
+The user gives you a rough goal. Generate 0–2 SHORT clarifying questions whose answers would most improve the final prompt. Return no questions if the goal is already specific enough. Rules:
 - Tailor every question to THIS specific goal. Never ask generic boilerplate that applies to any task.
 - Each question must target a different high-impact gap (audience, tone, length, format, constraints, key details, etc.) — pick the ones that matter for this goal.
 - Keep questions short and plain. No jargon.
@@ -25,20 +25,29 @@ const QUESTIONS_TOOL: Anthropic.Tool = {
     properties: {
       detectedLanguage: {
         type: "string",
-        description: "ISO 639-1 code of the user's goal language, e.g. 'en', 'cs'.",
+        description:
+          "ISO 639-1 code of the user's goal language, e.g. 'en', 'cs'.",
       },
       questions: {
         type: "array",
-        description: "3–5 short, goal-specific clarifying questions.",
+        description: "0–2 short, goal-specific clarifying questions.",
+        maxItems: 2,
         items: {
           type: "object",
           properties: {
-            id: { type: "string", description: "Short stable id, e.g. 'audience'." },
-            question: { type: "string", description: "The question text, in the user's language." },
+            id: {
+              type: "string",
+              description: "Short stable id, e.g. 'audience'.",
+            },
+            question: {
+              type: "string",
+              description: "The question text, in the user's language.",
+            },
             suggestions: {
               type: "array",
               items: { type: "string" },
-              description: "0–4 quick-pick answer chips. Empty when free text is better.",
+              description:
+                "0–4 quick-pick answer chips. Empty when free text is better.",
             },
           },
           required: ["id", "question", "suggestions"],
@@ -61,21 +70,35 @@ interface ClarifyOutput {
 }
 
 export async function POST(req: NextRequest) {
-  const rl = rateLimit(`clarify:${clientKey(req)}`, { limit: 30, windowMs: 60_000 });
+  const rl = rateLimit(`clarify:${clientKey(req)}`, {
+    limit: 30,
+    windowMs: 60_000,
+  });
   if (!rl.ok) return tooManyRequests(rl);
 
-  const body = await req.json();
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (!body || typeof body !== "object")
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const goal = typeof body.goal === "string" ? body.goal.trim() : "";
 
   if (!goal) {
     return NextResponse.json({ error: "Goal is required" }, { status: 400 });
   }
   if (goal.length > 2000) {
-    return NextResponse.json({ error: "Goal exceeds maximum length" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Goal exceeds maximum length" },
+      { status: 400 },
+    );
   }
 
   // The user's selected UI language overrides auto-detection of the goal text.
-  const langName = body.lang === "cs" ? "Czech" : body.lang === "en" ? "English" : null;
+  const langName =
+    body.lang === "cs" ? "Czech" : body.lang === "en" ? "English" : null;
   const userMessage = langName
     ? `Goal: ${goal}\n\nWrite the questions in ${langName}.`
     : `Goal: ${goal}`;
@@ -98,16 +121,32 @@ export async function POST(req: NextRequest) {
     }
 
     const out = toolUse.input as ClarifyOutput;
-    const questions = Array.isArray(out.questions) ? out.questions.slice(0, 5) : [];
+    const questions = Array.isArray(out.questions)
+      ? out.questions
+          .filter((q) => typeof q?.question === "string")
+          .slice(0, 2)
+          .map((q, i) => ({
+            id: `q${i}`,
+            question: q.question,
+            suggestions: Array.isArray(q.suggestions)
+              ? q.suggestions.filter((s) => typeof s === "string").slice(0, 4)
+              : [],
+          }))
+      : [];
 
     return NextResponse.json({
       detectedLanguage: out.detectedLanguage || "en",
       questions,
     });
   } catch (error) {
-    console.error("Clarify error:", error instanceof Error ? error.message : error);
-    // Non-blocking: if questions can't be generated, the client proceeds
-    // straight to generation. Return an empty list, not an error.
-    return NextResponse.json({ detectedLanguage: "en", questions: [] });
+    console.error(
+      "Clarify error:",
+      error instanceof Error ? error.message : error,
+    );
+    // Keep service failure distinct from the valid "no questions needed" result.
+    return NextResponse.json(
+      { error: "Questions unavailable" },
+      { status: 503 },
+    );
   }
 }

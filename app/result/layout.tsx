@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   description: "Your generated AI prompt with model recommendations.",
 };
 
-export default function ResultLayout({ children }: { children: React.ReactNode }) {
+export default function ResultLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return children;
 }

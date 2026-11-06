@@ -3,184 +3,301 @@
 import Link from "next/link";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import Composer from "./components/Composer";
 import ExampleSection from "./components/ExampleSection";
-import { useT } from "./i18n/LanguageProvider";
+import { BrandMark } from "./components/Brand";
+import Icon from "./components/Icon";
+import { useLang } from "./i18n/LanguageProvider";
 
 export default function Home() {
-  const t = useT();
+  const { lang } = useLang();
+  const cs = lang === "cs";
+  const faqs = cs
+    ? [
+        [
+          "Proč to nepřeskočit a nejít rovnou do ChatGPT?",
+          "Klidně můžeš. makebetterprompt pomáhá, když víš, čeho chceš dosáhnout, ale nevíš, jak to AI zadat. Ujasní cíl, doplní užitečné hranice a připraví zadání, které můžeš použít ve své oblíbené AI.",
+        ],
+        [
+          "Je to zdarma? Potřebuji účet?",
+          "Nástroj můžeš používat zdarma a bez registrace. Historie se ukládá jen v tomto prohlížeči. Platí limity požadavků, aby služba zůstala dostupná.",
+        ],
+        [
+          "Můžu psát česky?",
+          "Ano. Rozhraní, doplňující otázky i výsledný prompt podporují češtinu a angličtinu. Jazyk změníš přepínačem nahoře. U výsledku můžeš přepnout také na anglickou verzi.",
+        ],
+        [
+          "Kam se moje zadání posílá?",
+          "Pro vytvoření promptu se zadání odešle našemu serveru a poskytovateli AI, Anthropic. Nevkládej hesla, citlivé osobní údaje ani důvěrné dokumenty. Historii můžeš kdykoliv smazat.",
+        ],
+      ]
+    : [
+        [
+          "Why not just go straight to ChatGPT?",
+          "You absolutely can. makebetterprompt helps when you know what you want, but aren’t sure how to ask for it. It clarifies your goal, adds useful boundaries, and gives you a reusable starting point for your favorite AI.",
+        ],
+        [
+          "Is it free? Do I need an account?",
+          "You can use the tool for free, without signing up. Your history stays in this browser. Request limits apply to keep the service available.",
+        ],
+        [
+          "Can I use it in Czech?",
+          "Yes. The interface, follow-up questions, and generated prompt support English and Czech. Use the language switch at the top. You can also switch to an English version of your result.",
+        ],
+        [
+          "Where does my input go?",
+          "To generate a prompt, your input is sent to our server and AI provider, Anthropic. Don’t enter passwords, sensitive personal data, or confidential documents. You can delete your local history at any time.",
+        ],
+      ];
   return (
-    <div className="bg-gradient-main flex flex-col min-h-screen">
+    <>
       <Header />
-      <main className="flex-1">
-        {/* ── Hero Section ── */}
-        <section className="relative flex items-center justify-center px-6 min-h-screen overflow-hidden">
-          <div className="hero-glow" />
-          <div className="text-center max-w-2xl mx-auto relative z-10">
-            <div className="badge inline-flex items-center gap-2 mb-6">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              {t("hero.badge")}
+      <main id="main-content">
+        <section className="hero">
+          <div className="hero-art" aria-hidden="true">
+            <div className="light-arc" />
+            <div className="light-lines" />
+            {Array.from({ length: 8 }, (_, i) => (
+              <span className={`light-fin fin-${i}`} key={i} />
+            ))}
+          </div>
+          <div className="hero-content">
+            <div className="announcement">
+              <span className="status-dot" />
+              {cs
+                ? "Méně hádání. Více tvoření."
+                : "Less guesswork. More possibility."}
+              <Icon name="up-right" size={13} />
             </div>
-            <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold tracking-tight leading-tight mb-4 sm:mb-6 whitespace-nowrap">
-              {t("hero.title")}
+            <h1>
+              {cs ? "Tvůj nápad." : "Your idea."}
+              <br />
+              <span>{cs ? "Jasně vyjádřený." : "Clearly expressed."}</span>
             </h1>
-            <p className="text-gradient-green text-xl sm:text-3xl md:text-5xl font-bold tracking-tight mb-4 sm:mb-6">
-              {t("hero.subtitle")}
+            <p className="hero-description">
+              {cs
+                ? "Proměň myšlenku v prompt, kterému AI rozumí.\nBez složitého zadávání. Bez kurzu promptování."
+                : "Turn a rough thought into a prompt your AI can work with.\nNo perfect wording. No prompt engineering degree."}
             </p>
-            <p className="text-white/60 text-sm sm:text-lg mb-2">
-              {t("hero.tagline1")}
-            </p>
-            <p className="text-white/50 text-xs sm:text-base mb-8 sm:mb-10">
-              {t("hero.tagline2")}
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full">
-              <Link href="/builder" className="btn-primary inline-flex items-center justify-center gap-2 w-full sm:w-auto">
-                {t("hero.ctaBuild")} <span className="text-lg">→</span>
-              </Link>
-              <a href="#example" className="btn-secondary w-full sm:w-auto text-center">
-                {t("hero.ctaExample")}
-              </a>
+            <Composer />
+            <div className="hero-assurances">
+              <span>
+                <Icon name="check" size={13} />
+                {cs ? "Zdarma, bez registrace" : "Free. No account needed."}
+              </span>
+              <span>
+                <Icon name="globe" size={13} />
+                {cs ? "Česky i anglicky" : "English & Czech"}
+              </span>
             </div>
-
-            {/* Trusted by line */}
-            <div className="mt-12 sm:mt-16 flex flex-col items-center gap-3">
-              <p className="text-white/25 text-xs uppercase tracking-widest">{t("hero.worksWith")}</p>
-              <div className="flex items-center gap-3 sm:gap-6 text-white/30 text-xs sm:text-sm">
-                <span>ChatGPT</span>
-                <span className="w-1 h-1 rounded-full bg-white/20" />
-                <span>Claude</span>
-                <span className="w-1 h-1 rounded-full bg-white/20" />
-                <span>Gemini</span>
-                <span className="w-1 h-1 rounded-full bg-white/20" />
-                <span>Any AI</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Scroll indicator */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/20">
-            <span className="text-xs tracking-widest uppercase">{t("hero.scroll")}</span>
-            <svg width="16" height="24" viewBox="0 0 16 24" fill="none" className="animate-bounce">
-              <path d="M8 4v12m0 0l-4-4m4 4l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
           </div>
         </section>
-
-        <div className="section-divider" />
-
-        {/* ── About Section ── */}
-        <section id="about" className="scroll-mt-20 py-28 px-6 relative">
-          <div className="section-glow absolute inset-0" />
-          <div className="max-w-4xl mx-auto relative z-10">
-            <div className="text-center mb-12">
-              <div className="badge inline-block mb-4">{t("about.badge")}</div>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-                {t("about.title")}
+        <section
+          className="model-strip"
+          aria-label={cs ? "Kompatibilní AI nástroje" : "Compatible AI tools"}
+        >
+          <span className="mono-label">
+            {cs
+              ? "TVŮJ NÁPAD. TVOJE OBLÍBENÁ AI."
+              : "YOUR IDEAS. YOUR FAVORITE AI."}
+          </span>
+          <div className="model-names">
+            <span>
+              <span className="provider-symbol">◎</span>ChatGPT
+            </span>
+            <span>
+              <span className="provider-symbol claude-symbol">✳</span>Claude
+            </span>
+            <span>
+              <span className="provider-symbol gemini-symbol">✦</span>Gemini
+            </span>
+            <span className="model-more">
+              {cs ? "a další" : "and beyond"}
+              <Icon name="up-right" size={16} />
+            </span>
+          </div>
+        </section>
+        <section className="section how-section" id="how-it-works">
+          <div className="section-heading heading-split">
+            <div>
+              <span className="eyebrow">
+                {cs ? "OD MYŠLENKY K AKCI" : "FROM THINKING TO MAKING"}
+              </span>
+              <h2>
+                {cs
+                  ? "Méně přemýšlej jak.\nZačni tvořit."
+                  : "Skip the overthinking.\nStart creating."}
               </h2>
             </div>
-
-            <div className="gradient-border-card p-8 md:p-12 mb-10">
-              <div className="max-w-2xl mx-auto text-center">
-                <p className="text-white/60 text-base md:text-lg leading-relaxed mb-6">
-                  {t("about.p1")}
-                </p>
-                <p className="text-white/60 text-base md:text-lg leading-relaxed">
-                  {t("about.p2")}
-                </p>
-              </div>
-            </div>
-
-            {/* Feature highlights */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="glass-card shine-on-hover p-6 text-center">
-                <div className="w-10 h-10 rounded-lg bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-3">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            <p>
+              {cs
+                ? "Nemusíš vědět, jak psát prompty.\nStačí vědět, co chceš udělat."
+                : "You don’t need to know how to prompt.\nJust what you want to make."}
+            </p>
+          </div>
+          <div className="steps-grid">
+            {(cs
+              ? [
+                  [
+                    "Popiš svůj nápad",
+                    "Jednou větou, vlastními slovy. Nebo vlož prompt, který potřebuje trochu péče.",
+                  ],
+                  [
+                    "Dej mu jasný směr",
+                    "Získej konkrétní zadání. Pro upřesnění se můžeš nechat provést pár otázkami.",
+                  ],
+                  [
+                    "Vezmi ho do své AI",
+                    "Uprav, zkopíruj a použij. A když výsledek nesedí, doladíš ho jedním kliknutím.",
+                  ],
+                ]
+              : [
+                  [
+                    "Start with a thought",
+                    "One sentence, in your own words. Or paste a prompt that could use a little attention.",
+                  ],
+                  [
+                    "Give it direction",
+                    "Get a focused, usable prompt. Want more guidance? Work through a couple of questions.",
+                  ],
+                  [
+                    "Make something good",
+                    "Edit, copy, and take it to your AI. If it’s not quite right, refine it with a click.",
+                  ],
+                ]
+            ).map(([title, desc], i) => (
+              <article className="step" key={title}>
+                <div className="step-top">
+                  <span className="step-number">0{i + 1}</span>
+                  <Icon
+                    name={i === 0 ? "pen" : i === 1 ? "spark" : "up-right"}
+                    size={23}
+                  />
                 </div>
-                <h3 className="text-sm font-semibold mb-2">{t("about.feat1.title")}</h3>
-                <p className="text-white/40 text-xs leading-relaxed">{t("about.feat1.desc")}</p>
-              </div>
-              <div className="glass-card shine-on-hover p-6 text-center">
-                <div className="w-10 h-10 rounded-lg bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-3">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
-                </div>
-                <h3 className="text-sm font-semibold mb-2">{t("about.feat2.title")}</h3>
-                <p className="text-white/40 text-xs leading-relaxed">{t("about.feat2.desc")}</p>
-              </div>
-              <div className="glass-card shine-on-hover p-6 text-center">
-                <div className="w-10 h-10 rounded-lg bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-3">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                </div>
-                <h3 className="text-sm font-semibold mb-2">{t("about.feat3.title")}</h3>
-                <p className="text-white/40 text-xs leading-relaxed">{t("about.feat3.desc")}</p>
-              </div>
-            </div>
+                <h3>{title}</h3>
+                <p>{desc}</p>
+              </article>
+            ))}
           </div>
         </section>
-
-        <div className="section-divider" />
-
-        {/* ── Example Section ── */}
-        <section className="section-dark">
-          <ExampleSection />
-        </section>
-
-        <div className="section-divider" />
-
-        {/* ── How it works ── */}
-        <section id="how-it-works" className="scroll-mt-20 py-28 px-6 relative">
-          <div className="section-glow absolute inset-0" />
-          <div className="max-w-4xl mx-auto relative z-10">
-            <div className="text-center mb-16">
-              <div className="badge inline-block mb-4">{t("how.badge")}</div>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-                {t("how.title")}
+        <section className="section feature-section">
+          <div className="feature-grid">
+            <article className="feature-card feature-main">
+              <span className="eyebrow">
+                {cs
+                  ? "TVŮJ ZÁMĚR. BEZ ŠUMU."
+                  : "YOUR INTENT. WITHOUT THE NOISE."}
+              </span>
+              <h2>
+                {cs
+                  ? "Není to delší prompt.\nJe to lepší začátek."
+                  : "Not a longer prompt.\nA better starting point."}
               </h2>
-              <p className="text-white/50 max-w-md mx-auto">
-                {t("how.subtitle")}
+              <p>
+                {cs
+                  ? "Správný kontext, jasný cíl a užitečné hranice. Tvoje myšlenka zůstává tvoje — jen ji AI lépe pochopí."
+                  : "The right context, a clear goal, and useful boundaries. Still your idea—just easier for AI to understand."}
               </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Step 1: Describe */}
-              <div className="gradient-border-card shine-on-hover p-8 text-center">
-                <div className="float">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-4">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                  </div>
+              <div className="signal-visual" aria-hidden="true">
+                <div className="signal-orbit orbit-one" />
+                <div className="signal-orbit orbit-two" />
+                <div className="signal-core">
+                  <BrandMark />
                 </div>
-                <div className="w-8 h-8 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center mx-auto mb-4 text-emerald-400 text-xs font-bold pulse-glow">1</div>
-                <h3 className="text-lg font-semibold mb-2">{t("how.step1.title")}</h3>
-                <p className="text-white/40 text-sm leading-relaxed">{t("how.step1.desc")}</p>
+                <span className="signal-tag tag-goal">
+                  {cs ? "Jasný cíl" : "Clear goal"}
+                </span>
+                <span className="signal-tag tag-context">
+                  {cs ? "Tvůj kontext" : "Your context"}
+                </span>
+                <span className="signal-tag tag-output">
+                  {cs ? "Užitečný výstup" : "Useful output"}
+                </span>
               </div>
-
-              {/* Step 2: Generate */}
-              <div className="gradient-border-card shine-on-hover p-8 text-center">
-                <div className="float-delay">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-4">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                  </div>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center mx-auto mb-4 text-emerald-400 text-xs font-bold pulse-glow">2</div>
-                <h3 className="text-lg font-semibold mb-2">{t("how.step2.title")}</h3>
-                <p className="text-white/40 text-sm leading-relaxed">{t("how.step2.desc")}</p>
+            </article>
+            <article className="feature-card feature-refine">
+              <div className="feature-icon">
+                <Icon name="edit" size={22} />
               </div>
-
-              {/* Step 3: Use */}
-              <div className="gradient-border-card shine-on-hover p-8 text-center">
-                <div className="float-delay-2">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center mx-auto mb-4">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-400"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                  </div>
-                </div>
-                <div className="w-8 h-8 rounded-full bg-emerald-400/15 border border-emerald-400/30 flex items-center justify-center mx-auto mb-4 text-emerald-400 text-xs font-bold pulse-glow">3</div>
-                <h3 className="text-lg font-semibold mb-2">{t("how.step3.title")}</h3>
-                <p className="text-white/40 text-sm leading-relaxed">{t("how.step3.desc")}</p>
+              <h3>
+                {cs
+                  ? "První verze je jen začátek."
+                  : "The first draft is just the start."}
+              </h3>
+              <p>
+                {cs
+                  ? "Zkrať ho. Změň tón. Doplň detail. Prompt můžeš upravit tak, aby opravdu seděl."
+                  : "Make it shorter. Change the tone. Add a detail. Shape your prompt until it feels right."}
+              </p>
+              <div className="refine-preview" aria-hidden="true">
+                <span>
+                  <Icon name="spark" size={13} />
+                  {cs ? "Stručněji" : "Make it shorter"}
+                </span>
+                <span>{cs ? "Přirozenější tón" : "More conversational"}</span>
+                <span>{cs ? "Více detailů" : "Add more detail"}</span>
               </div>
-            </div>
+            </article>
+            <article className="feature-card feature-language">
+              <div className="language-art" aria-hidden="true">
+                <span>EN</span>
+                <Icon name="arrow" size={20} />
+                <span>CZ</span>
+              </div>
+              <h3>
+                {cs ? "Mysli ve svém jazyce." : "Think in your own language."}
+              </h3>
+              <p>
+                {cs
+                  ? "Od prvního nápadu po hotový prompt. Česky i anglicky, bez zbytečného překládání."
+                  : "From your first idea to your finished prompt. English or Czech, without the extra translating."}
+              </p>
+            </article>
           </div>
         </section>
-
+        <ExampleSection />
+        <section className="section faq-section">
+          <div className="section-heading">
+            <span className="eyebrow">
+              {cs ? "JEŠTĚ NĚCO?" : "A LITTLE MORE CLARITY"}
+            </span>
+            <h2>{cs ? "Dobré otázky." : "Good questions."}</h2>
+          </div>
+          <div className="faq-list">
+            {faqs.map(([q, a]) => (
+              <details key={q}>
+                <summary>
+                  {q}
+                  <Icon name="plus" size={18} />
+                </summary>
+                <p>{a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+        <section className="section final-cta">
+          <div className="cta-glow" aria-hidden="true" />
+          <BrandMark />
+          <span className="eyebrow">
+            {cs ? "UŽ MÁŠ TEN NÁPAD." : "YOU ALREADY HAVE THE IDEA."}
+          </span>
+          <h2>
+            {cs ? "Dej mu dobrý začátek." : "Let’s give it a good start."}
+          </h2>
+          <p>
+            {cs
+              ? "Tvůj další skvělý výstup začíná jasným zadáním."
+              : "Your next great output starts with a little clarity."}
+          </p>
+          <Link href="#create" className="button button-primary">
+            {cs ? "Vytvořit můj prompt" : "Create my prompt"}
+            <span className="button-arrow">
+              <Icon name="arrow" size={17} />
+            </span>
+          </Link>
+        </section>
       </main>
       <Footer />
-    </div>
+    </>
   );
 }

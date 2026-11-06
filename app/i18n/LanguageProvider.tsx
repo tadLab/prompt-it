@@ -1,18 +1,26 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { messages, LANGS, type Lang } from "./messages";
 
 const STORAGE_KEY = "prompt-it-lang";
 
 interface LanguageContextValue {
   lang: Lang;
+  ready: boolean;
   setLang: (lang: Lang) => void;
   t: (key: string, vars?: Record<string, string>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextValue>({
   lang: "en",
+  ready: false,
   setLang: () => {},
   t: (key) => key,
 });
@@ -21,15 +29,22 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // SSR-safe default: must match the server render (English) on first paint to
   // avoid a hydration mismatch; the real preference is applied in useEffect.
   const [lang, setLangState] = useState<Lang>("en");
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      /* private browsing */
+    }
     if (stored === "en" || stored === "cs") {
       setLangState(stored);
     } else if (navigator.language?.toLowerCase().startsWith("cs")) {
       // First-time Czech visitor → default to Czech.
       setLangState("cs");
     }
+    setReady(true);
   }, []);
 
   useEffect(() => {
@@ -55,11 +70,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       }
       return str;
     },
-    [lang]
+    [lang],
   );
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={{ lang, ready, setLang, t }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -79,24 +94,29 @@ export function LanguageSwitcher() {
   const { lang, setLang } = useLang();
   return (
     <div
-      className="flex items-center rounded-full border border-white/10 overflow-hidden text-xs"
+      className="language-switch"
       role="group"
-      aria-label="Language"
+      aria-label={lang === "cs" ? "Jazyk" : "Language"}
     >
       {LANGS.map((l) => (
         <button
           key={l}
           onClick={() => setLang(l)}
           aria-pressed={lang === l}
-          className={`px-2.5 py-1 font-semibold transition-colors ${
-            lang === l
-              ? "bg-emerald-500 text-black"
-              : "text-white/50 hover:text-white"
-          }`}
+          className={lang === l ? "active" : ""}
         >
-          {l.toUpperCase()}
+          {l === "cs" ? "CZ" : "EN"}
         </button>
       ))}
     </div>
+  );
+}
+
+export function SkipLink() {
+  const { lang } = useLang();
+  return (
+    <a className="skip-link" href="#main-content">
+      {lang === "cs" ? "Přeskočit na obsah" : "Skip to content"}
+    </a>
   );
 }

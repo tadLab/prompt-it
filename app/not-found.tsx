@@ -1,16 +1,29 @@
+"use client";
 import Link from "next/link";
-
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import Icon from "./components/Icon";
+import { useLang } from "./i18n/LanguageProvider";
 export default function NotFound() {
+  const { lang } = useLang();
+  const cs = lang === "cs";
   return (
-    <div className="bg-gradient-main flex flex-col min-h-screen items-center justify-center px-6">
-      <h1 className="text-6xl font-bold text-emerald-400 mb-4">404</h1>
-      <p className="text-xl font-semibold mb-2">Page not found</p>
-      <p className="text-white/50 mb-8">
-        The page you&apos;re looking for doesn&apos;t exist.
-      </p>
-      <Link href="/" className="btn-primary">
-        Back to home
-      </Link>
-    </div>
+    <>
+      <Header />
+      <main className="workspace empty-state" id="main-content">
+        <span className="eyebrow">404</span>
+        <h1>{cs ? "Tady jsme ztratili směr." : "A little off course."}</h1>
+        <p style={{ marginTop: 20 }}>
+          {cs
+            ? "Tato stránka neexistuje. Tvůj další nápad ale čeká."
+            : "This page doesn’t exist. Your next idea still does."}
+        </p>
+        <Link href="/" className="button button-primary">
+          {cs ? "Zpět na začátek" : "Back to the start"}
+          <Icon name="arrow" size={16} />
+        </Link>
+      </main>
+      <Footer />
+    </>
   );
 }

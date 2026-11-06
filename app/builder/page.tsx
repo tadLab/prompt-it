@@ -1,221 +1,279 @@
 "use client";
 
-import { useState, useCallback, KeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useHistoryCount } from "../hooks/useHistory";
-import { saveWizardInputs, clearPromptResult, type WizardAnswer } from "../hooks/usePromptStore";
+import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { useT, useLang, LanguageSwitcher } from "../i18n/LanguageProvider";
+import Icon from "../components/Icon";
+import { BrandMark } from "../components/Brand";
+import { useLang } from "../i18n/LanguageProvider";
+import {
+  clearPromptResult,
+  getWizardInputs,
+  saveWizardInputs,
+} from "../hooks/usePromptStore";
 
-interface ClarifyQuestion {
+interface Question {
   id: string;
   question: string;
   suggestions: string[];
 }
-
 export default function BuilderPage() {
-  const router = useRouter();
-  const historyCount = useHistoryCount();
-  const t = useT();
   const { lang } = useLang();
-
-  const [phase, setPhase] = useState<"goal" | "questions">("goal");
+  const cs = lang === "cs";
+  const router = useRouter();
   const [goal, setGoal] = useState("");
-  const [questions, setQuestions] = useState<ClarifyQuestion[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [loadingQuestions, setLoadingQuestions] = useState(false);
-
-  const canContinue = goal.trim().length > 0;
-
-  // Persist the intake and head to generation. `withAnswers=false` is the
-  // low-barrier floor: generate straight from the goal, skipping questions.
-  const generate = useCallback(
-    (withAnswers: boolean) => {
-      const answerList: WizardAnswer[] = withAnswers
-        ? questions
-            .map((q) => ({ question: q.question, answer: (answers[q.id] || "").trim() }))
-            .filter((a) => a.answer.length > 0)
-        : [];
-      saveWizardInputs({ goal: goal.trim(), answers: answerList });
-      clearPromptResult(); // ensure /result streams a fresh prompt
-      router.push("/result");
-    },
-    [goal, questions, answers, router]
-  );
-
-  // Fetch adaptive questions for this goal. Non-blocking: if none come back
-  // (or the call fails), go straight to generation so the user is never stuck.
-  const fetchQuestions = useCallback(async () => {
-    if (!canContinue || loadingQuestions) return;
-    setLoadingQuestions(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [asked, setAsked] = useState(false);
+  const clarification = useRef<AbortController | null>(null);
+  useEffect(() => {
+    setGoal(getWizardInputs().goal);
+  }, []);
+  useEffect(() => {
+    setQuestions([]);
+    setAnswers({});
+    setAsked(false);
+    setBusy(false);
+    setError("");
+    return () => clarification.current?.abort();
+  }, [lang]);
+  function generate() {
+    if (!goal.trim()) {
+      setError(
+        cs ? "Napiš, co chceš vytvořit." : "Tell us what you want to create.",
+      );
+      return;
+    }
     try {
-      const res = await fetch("/api/clarify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: goal.trim(), lang }),
+      saveWizardInputs({
+        goal: goal.trim(),
+        answers: questions.map((q) => ({
+          question: q.question,
+          answer: answers[q.id] || "",
+        })),
+        lang,
       });
-      const data = await res.json();
-      const qs: ClarifyQuestion[] = Array.isArray(data.questions) ? data.questions : [];
-      if (qs.length === 0) {
-        generate(false);
-        return;
-      }
-      setQuestions(qs);
-      setPhase("questions");
+      clearPromptResult();
+      router.push("/result");
     } catch {
-      generate(false);
+      setError(
+        cs
+          ? "Pro pokračování povol úložiště prohlížeče."
+          : "Allow browser storage to continue.",
+      );
+    }
+  }
+  async function clarify() {
+    if (!goal.trim()) {
+      setError(
+        cs ? "Nejdřív napiš svůj nápad." : "Start with your idea first.",
+      );
+      return;
+    }
+    setBusy(true);
+    setError("");
+    clarification.current?.abort();
+    const abort = new AbortController();
+    clarification.current = abort;
+    try {
+      const response = await fetch("/api/clarify", {
+        method: "POST",
+        signal: abort.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal, lang }),
+      });
+      if (!response.ok)
+        throw new Error(response.status === 429 ? "limit" : "service");
+      const data = await response.json();
+      if (abort.signal.aborted) return;
+      setQuestions(data.questions ?? []);
+      setAnswers({});
+      setAsked(true);
+    } catch (e) {
+      if (abort.signal.aborted) return;
+      setError(
+        e instanceof Error && e.message === "limit"
+          ? cs
+            ? "Chvilku počkej, limit požadavků se brzy obnoví."
+            : "Please wait a moment for the request limit to reset."
+          : cs
+            ? "Otázky se nepodařilo načíst. Zkus to znovu, nebo vytvoř prompt přímo."
+            : "We couldn’t load the questions. Try again, or create your prompt directly.",
+      );
     } finally {
-      setLoadingQuestions(false);
+      if (!abort.signal.aborted) setBusy(false);
     }
-  }, [canContinue, loadingQuestions, goal, generate, lang]);
-
-  const handleGoalKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      fetchQuestions();
-    }
-  };
-
-  const setAnswer = (id: string, value: string) => {
-    setAnswers((prev) => ({ ...prev, [id]: value }));
-  };
-  const toggleSuggestion = (id: string, sugg: string) => {
-    setAnswers((prev) => ({ ...prev, [id]: prev[id] === sugg ? "" : sugg }));
-  };
-
+  }
   return (
-    <div className="bg-gradient-main flex flex-col min-h-screen">
-      {/* Builder header */}
-      <header className="px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-gradient-green text-xl font-bold tracking-tight">
-          prompt it
-        </Link>
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher />
-          <Link
-            href="/history"
-            className="badge flex items-center gap-2 hover:border-emerald-400/40 transition-colors"
-          >
-            <span>📜</span>
-            <span>{t("nav.history")}</span>
-            {historyCount > 0 && (
-              <span className="bg-emerald-400 text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                {historyCount}
-              </span>
-            )}
-          </Link>
+    <>
+      <Header />
+      <main className="workspace" id="main-content">
+        <div className="workspace-stepper">
+          <span className="active">
+            <b>1</b>
+            {cs ? "Tvůj nápad" : "Your idea"}
+          </span>
+          <i />
+          <span className={asked ? "active" : ""}>
+            <b>2</b>
+            {cs ? "Detaily" : "A little context"}
+          </span>
+          <i />
+          <span>
+            <b>3</b>
+            {cs ? "Tvůj prompt" : "Your prompt"}
+          </span>
         </div>
-      </header>
-
-      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
-        {phase === "goal" ? (
-          <div className="w-full max-w-xl mx-auto fade-in">
-            <div className="text-center mb-6">
-              <p className="text-emerald-400 text-xs font-medium tracking-widest mb-2">
-                {t("builder.step1")}
-              </p>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-                {t("builder.goalTitle")}
-              </h1>
-            </div>
-
-            <textarea
-              className="prompt-textarea"
-              placeholder={t("builder.goalPlaceholder")}
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              onKeyDown={handleGoalKeyDown}
-              autoFocus
-              rows={6}
-            />
-            <p className="text-center text-white/30 text-xs mt-3">
-              {t("builder.hintPre")} <span className="kbd">Enter</span> {t("builder.hintMid")} •{" "}
-              <span className="kbd">Shift + Enter</span> {t("builder.hintNewline")}
+        <div className="workspace-head">
+          <div>
+            <span className="eyebrow">
+              {cs ? "PROSTOR PRO TVŮJ NÁPAD" : "A LITTLE ROOM FOR YOUR IDEA"}
+            </span>
+            <h1>{cs ? "Co chceš vytvořit?" : "What’s on your mind?"}</h1>
+            <p>
+              {cs
+                ? "Začni vlastními slovy. Zbytek spolu doladíme."
+                : "Start in your own words. We’ll work out the details together."}
             </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4">
-              <button
-                onClick={fetchQuestions}
-                disabled={!canContinue || loadingQuestions}
-                className="btn-primary"
-              >
-                {loadingQuestions ? t("builder.preparing") : t("builder.continue")}
-              </button>
-              <button
-                onClick={() => generate(false)}
-                disabled={!canContinue || loadingQuestions}
-                className="btn-ghost text-sm"
-              >
-                {t("builder.skip")}
-              </button>
-            </div>
           </div>
-        ) : (
-          <div className="w-full max-w-xl mx-auto fade-in">
-            <div className="text-center mb-6">
-              <p className="text-emerald-400 text-xs font-medium tracking-widest mb-2">
-                {t("builder.step2")}
+        </div>
+        <div className="builder-grid">
+          <section className="panel">
+            <label htmlFor="builder-goal">
+              {cs
+                ? "Tvůj nápad nebo původní prompt"
+                : "Your idea or existing prompt"}
+            </label>
+            <textarea
+              id="builder-goal"
+              disabled={busy}
+              className="field-textarea"
+              maxLength={2000}
+              value={goal}
+              placeholder={
+                cs
+                  ? "Např. chci napsat nabídku spolupráce pro místní kavárnu…"
+                  : "e.g. I want to pitch a collaboration to a local coffee shop…"
+              }
+              onChange={(e) => {
+                setGoal(e.target.value);
+                setAsked(false);
+                setQuestions([]);
+                setAnswers({});
+              }}
+            />
+            <div className="field-hint">
+              {goal.length}/2,000 ·{" "}
+              {cs
+                ? "Nevkládej citlivé údaje ani hesla."
+                : "Please leave out sensitive information and passwords."}
+            </div>
+            {asked && questions.length === 0 && (
+              <p className="notice" style={{ marginTop: 22 }}>
+                {cs
+                  ? "Máme dost informací pro první verzi. Můžeš pokračovat."
+                  : "That’s enough context for a first version. You’re ready to go."}
               </p>
-              <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-                {t("builder.step2Title")}
-              </h1>
-            </div>
-
-            <div className="space-y-5">
-              {questions.map((q) => (
-                <div key={q.id}>
-                  <label
-                    htmlFor={`q-${q.id}`}
-                    className="block text-sm font-medium text-white/90 mb-2"
-                  >
-                    {q.question}
-                  </label>
-                  {q.suggestions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {q.suggestions.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => toggleSuggestion(q.id, s)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                            answers[q.id] === s
-                              ? "bg-emerald-500 text-black border-emerald-500"
-                              : "bg-white/5 text-white/60 border-white/10 hover:text-white"
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <input
-                    id={`q-${q.id}`}
-                    type="text"
-                    value={answers[q.id] || ""}
-                    onChange={(e) => setAnswer(q.id, e.target.value)}
-                    placeholder={t("builder.answerPlaceholder")}
-                    className="w-full bg-[var(--bg-card)] border border-[var(--border-green)] rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-emerald-400 transition-colors"
-                  />
+            )}
+            {questions.map((q, i) => (
+              <div className="question-block" key={q.id}>
+                <label htmlFor={`answer-${q.id}`}>
+                  <span className="mono-label">0{i + 1} / </span>
+                  {q.question}
+                </label>
+                <input
+                  id={`answer-${q.id}`}
+                  className="field-input"
+                  maxLength={800}
+                  value={answers[q.id] ?? ""}
+                  placeholder={
+                    cs
+                      ? "Vlastní odpověď, nebo vyber možnost…"
+                      : "Your answer, or choose a suggestion…"
+                  }
+                  onChange={(e) =>
+                    setAnswers({ ...answers, [q.id]: e.target.value })
+                  }
+                />
+                <div className="suggestions">
+                  {q.suggestions?.map((s) => (
+                    <button
+                      type="button"
+                      aria-pressed={answers[q.id] === s}
+                      key={s}
+                      onClick={() => setAnswers({ ...answers, [q.id]: s })}
+                    >
+                      {s}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-              <button onClick={() => generate(true)} className="btn-primary">
-                {t("builder.generate")}
+              </div>
+            ))}
+            {error && (
+              <p className="error-message" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="field-actions">
+              <button className="text-button" disabled={busy} onClick={clarify}>
+                <Icon name="plus" size={16} />
+                {busy
+                  ? cs
+                    ? "Hledám správné otázky…"
+                    : "Finding the right questions…"
+                  : asked
+                    ? cs
+                      ? "Nové otázky"
+                      : "Refresh questions"
+                    : cs
+                      ? "Pomoz mi upřesnit zadání"
+                      : "Help me add context"}
               </button>
               <button
-                onClick={() => setPhase("goal")}
-                className="btn-ghost text-sm"
+                className="button button-primary"
+                disabled={busy || !goal.trim()}
+                onClick={generate}
               >
-                {t("builder.back")}
+                {cs ? "Vytvořit prompt" : "Create my prompt"}
+                <span className="button-arrow">
+                  <Icon name="arrow" size={17} />
+                </span>
               </button>
             </div>
-          </div>
-        )}
+          </section>
+          <aside className="panel builder-aside">
+            <div className="brand-art">
+              <BrandMark />
+            </div>
+            <h3>
+              {cs
+                ? "Nemusí to být dokonalé."
+                : "It doesn’t have to be perfect."}
+            </h3>
+            <p>
+              {cs
+                ? "Pomůže nám, když zmíníš, pro koho výstup je a co od něj očekáváš. Ale i jedna věta je dobrý začátek."
+                : "It helps to mention who it’s for and what a good result looks like. But even one sentence is a good start."}
+            </p>
+            <div className="builder-note">
+              <Icon name="check" size={14} />
+              {cs
+                ? "Otázky jsou dobrovolné. Prompt můžeš vytvořit rovnou."
+                : "Questions are optional. You can create your prompt straight away."}
+            </div>
+            <div className="builder-note">
+              <Icon name="globe" size={14} />
+              {cs
+                ? "Výsledek dostaneš česky, s možností anglické verze."
+                : "Your result follows your selected language."}
+            </div>
+          </aside>
+        </div>
       </main>
-
       <Footer />
-    </div>
+    </>
   );
 }

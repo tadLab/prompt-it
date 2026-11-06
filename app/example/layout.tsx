@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   description: "See how structured prompts deliver better AI results.",
 };
 
-export default function ExampleLayout({ children }: { children: React.ReactNode }) {
+export default function ExampleLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return children;
 }

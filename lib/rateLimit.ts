@@ -33,7 +33,7 @@ export interface RateLimitOptions {
 export function rateLimit(
   key: string,
   { limit, windowMs }: RateLimitOptions,
-  now: number = Date.now()
+  now: number = Date.now(),
 ): RateLimitResult {
   const existing = buckets.get(key);
 
@@ -71,7 +71,8 @@ function pruneExpired(now: number) {
 /** Best-effort client identity from proxy headers (Vercel sets x-forwarded-for). */
 export function clientKey(req: Request): string {
   const fwd = req.headers.get("x-forwarded-for");
-  const ip = fwd?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const ip =
+    fwd?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
   return ip;
 }
 
@@ -86,7 +87,7 @@ export function tooManyRequests(result: RateLimitResult): Response {
         "Retry-After": String(result.retryAfterSec),
         "X-RateLimit-Remaining": String(result.remaining),
       },
-    }
+    },
   );
 }
 

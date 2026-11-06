@@ -40,12 +40,16 @@ export const AI_TARGETS: AiTarget[] = [
  * "GPT-4", "Google Gemini") to a known target id, or null if none matches.
  * Kept liberal because the model name comes from the LLM and varies in wording.
  */
-export function targetIdForModel(model: string | undefined | null): AiTargetId | null {
+export function targetIdForModel(
+  model: string | undefined | null,
+): AiTargetId | null {
   if (!model) return null;
   const m = model.toLowerCase();
-  if (m.includes("chatgpt") || m.includes("gpt") || m.includes("openai")) return "chatgpt";
+  if (m.includes("chatgpt") || m.includes("gpt") || m.includes("openai"))
+    return "chatgpt";
   if (m.includes("claude") || m.includes("anthropic")) return "claude";
-  if (m.includes("gemini") || m.includes("bard") || m.includes("google")) return "gemini";
+  if (m.includes("gemini") || m.includes("bard") || m.includes("google"))
+    return "gemini";
   return null;
 }
 

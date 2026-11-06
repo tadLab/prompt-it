@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import Icon from "../components/Icon";
+import { BrandMark } from "../components/Brand";
+import { useLang } from "../i18n/LanguageProvider";
 import {
   getPromptResult,
   getWizardInputs,
@@ -13,470 +15,635 @@ import {
 } from "../hooks/usePromptStore";
 import { useHistory } from "../hooks/useHistory";
 import {
-  AI_TARGETS,
-  getTarget,
-  targetIdForModel,
-  type AiTarget,
-} from "../lib/aiTargets";
-import {
-  promptBeforeMeta,
   parseStreamedResult,
-  hasUsablePrompt,
+  promptBeforeMeta,
+  isCompleteStream,
 } from "../lib/streamResult";
-import { useT, useLang } from "../i18n/LanguageProvider";
+import { applyPromptEdit } from "../lib/resultEditing";
 
-function languageLabel(code?: string): string {
-  const map: Record<string, string> = {
-    cs: "Čeština",
-    sk: "Slovenčina",
-    de: "Deutsch",
-    fr: "Français",
-    es: "Español",
-    pl: "Polski",
-    it: "Italiano",
-  };
-  if (!code) return "Original";
-  return map[code.toLowerCase()] ?? code.toUpperCase();
+function PromptText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/\n/).map((line, i) =>
+        /^#{1,3}\s/.test(line) ? (
+          <h3 key={i}>{line.replace(/^#{1,3}\s/, "")}</h3>
+        ) : (
+          <span key={i}>
+            {line
+              .split(/(\*\*[^*]+\*\*)/g)
+              .map((part, j) =>
+                part.startsWith("**") ? (
+                  <strong key={j}>{part.slice(2, -2)}</strong>
+                ) : (
+                  part
+                ),
+              )}
+            {"\n"}
+          </span>
+        ),
+      )}
+    </>
+  );
 }
 
 export default function ResultPage() {
-  const router = useRouter();
-  const t = useT();
-  const { lang } = useLang();
-  const { addEntry } = useHistory();
+  const { lang, ready } = useLang();
+  const cs = lang === "cs";
+  const { addEntry, updateEntry } = useHistory();
   const [result, setResult] = useState<PromptResult | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedPrompt, setEditedPrompt] = useState("");
-  const [openedTarget, setOpenedTarget] = useState<string | null>(null);
-  const [activeLang, setActiveLang] = useState<"local" | "en">("local");
-  const [showRefine, setShowRefine] = useState(false);
+  const [streamText, setStreamText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [missing, setMissing] = useState(false);
+  const [version, setVersion] = useState<"local" | "en">("local");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [refineLoading, setRefineLoading] = useState(false);
-  const [refineError, setRefineError] = useState(false);
-  const [streaming, setStreaming] = useState(false);
-  const [streamedText, setStreamedText] = useState("");
-  const [genError, setGenError] = useState(false);
-  const hasSaved = useRef(false);
-  const startedRef = useRef(false);
-
-  const saveToHistoryOnce = (r: PromptResult) => {
-    if (hasSaved.current) return;
-    hasSaved.current = true;
-    addEntry({ inputs: getWizardInputs(), result: r });
-    window.dispatchEvent(new Event("history-updated"));
-  };
-
-  const finalize = (r: PromptResult) => {
-    setResult(r);
-    setActiveLang("local");
-    setEditedPrompt(r.prompt);
-    setStreaming(false);
-    savePromptResult(r);
-    saveToHistoryOnce(r);
-  };
-
-  // Last-resort fallback: the robust tool-use endpoint, if streaming yields nothing.
-  const fallbackGenerate = async (inputs: ReturnType<typeof getWizardInputs>) => {
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...inputs, lang }),
-      });
-      const data = await res.json();
-      if (!data?.prompt) throw new Error("empty");
-      finalize(data);
-    } catch {
-      setStreaming(false);
-      setGenError(true);
-    }
-  };
-
-  const runStream = async (inputs: ReturnType<typeof getWizardInputs>) => {
-    setStreaming(true);
-    setGenError(false);
-    setStreamedText("");
-    try {
-      const res = await fetch("/api/generate-stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...inputs, lang }),
-      });
-      if (!res.ok || !res.body) throw new Error("no stream");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        setStreamedText(promptBeforeMeta(buffer));
-      }
-      if (hasUsablePrompt(buffer)) {
-        finalize(parseStreamedResult(buffer));
-      } else {
-        await fallbackGenerate(inputs);
-      }
-    } catch {
-      await fallbackGenerate(inputs);
-    }
-  };
-
-  useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-
-    // Stored result → came from history/refresh: just show it.
-    const stored = getPromptResult();
-    if (stored) {
-      setResult(stored);
-      setEditedPrompt(stored.prompt);
-      saveToHistoryOnce(stored);
-      return;
-    }
-    // No result yet → fresh generation: stream it.
-    const inputs = getWizardInputs();
-    if (!inputs.goal) {
-      router.replace("/builder");
-      return;
-    }
-    runStream(inputs);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const [toast, setToast] = useState("");
+  const [previous, setPrevious] = useState<PromptResult | null>(null);
+  const controller = useRef<AbortController | null>(null);
+  const initialized = useRef(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const current = result
+    ? version === "en"
+      ? result.promptEnglish || result.prompt
+      : result.prompt
+    : streamText;
+  const notify = useCallback((message: string) => {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 3500);
   }, []);
 
-  // Text shown/used right now: the active language version, or edits on top of it.
-  const activeBaseText = (): string => {
-    if (!result) return "";
-    const en = result.promptEnglish ?? result.prompt;
-    const loc = result.promptLocalized ?? "";
-    const bilingual = !!loc && loc !== en;
-    if (!bilingual) return result.prompt;
-    return activeLang === "en" ? en : loc;
-  };
-  const currentText = () => (isEditing ? editedPrompt : activeBaseText());
+  const persist = useCallback(
+    (next: PromptResult) => {
+      setResult(next);
+      try {
+        savePromptResult(next);
+        if (next.historyId) updateEntry(next.historyId, next);
+      } catch {
+        notify(
+          cs
+            ? "Výsledek je připravený, ale prohlížeč ho nemohl uložit."
+            : "Your result is ready, but browser storage couldn’t save it.",
+        );
+      }
+    },
+    [updateEntry, notify, cs],
+  );
 
-  const handleCopy = async () => {
-    if (!result) return;
-    await navigator.clipboard.writeText(currentText());
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const generate = useCallback(
+    async (
+      refinement?: { prompt: string; feedback: string },
+      prior?: PromptResult | null,
+    ) => {
+      const inputs = getWizardInputs();
+      if (!inputs.goal && !refinement) {
+        setMissing(true);
+        return;
+      }
+      controller.current?.abort();
+      const abort = new AbortController();
+      controller.current = abort;
+      setBusy(true);
+      setError("");
+      setStreamText("");
+      try {
+        const response = await fetch("/api/generate-stream", {
+          method: "POST",
+          signal: abort.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            refinement
+              ? {
+                  refinePrompt: refinement.prompt,
+                  feedback: refinement.feedback,
+                  lang,
+                }
+              : { ...inputs, lang: inputs.lang || lang },
+          ),
+        });
+        if (!response.ok)
+          throw new Error(response.status === 429 ? "limit" : "service");
+        if (!response.body) throw new Error("service");
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let full = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          full += decoder.decode(value, { stream: true });
+          if (!refinement) setStreamText(promptBeforeMeta(full));
+        }
+        full += decoder.decode();
+        if (!isCompleteStream(full)) throw new Error("service");
+        const parsed = parseStreamedResult(full);
+        if (!parsed.prompt?.trim() || !parsed.recommendedModel)
+          throw new Error("service");
+        if (abort.signal.aborted) return;
+        let next: PromptResult = {
+          ...parsed,
+          generationId: crypto.randomUUID(),
+        };
+        if (prior?.historyId) {
+          next = { ...next, historyId: prior.historyId };
+          setPrevious(prior);
+        } else {
+          try {
+            const entry = addEntry({ inputs, result: next });
+            next.historyId = entry.id;
+          } catch {
+            notify(
+              cs
+                ? "Historii nelze uložit. Prompt si můžeš zkopírovat."
+                : "History couldn’t be saved. You can still copy your prompt.",
+            );
+          }
+        }
+        persist(next);
+        setVersion("local");
+        setFeedback("");
+      } catch (e) {
+        if (abort.signal.aborted) return;
+        setError(
+          e instanceof Error && e.message === "limit"
+            ? cs
+              ? "Příliš mnoho požadavků. Počkej prosím minutu a zkus to znovu."
+              : "Too many requests. Please wait a minute and try again."
+            : cs
+              ? "Prompt se nepodařilo dokončit. Tvoje zadání zůstalo uložené. Zkus to znovu."
+              : "We couldn’t finish your prompt. Your input is still saved. Please try again.",
+        );
+        setStreamText("");
+      } finally {
+        if (!abort.signal.aborted) setBusy(false);
+      }
+    },
+    [lang, cs, addEntry, notify, persist],
+  );
 
-  const handleEdit = () => {
-    setIsEditing(!isEditing);
-  };
+  useEffect(() => {
+    if (!ready || initialized.current) return;
+    initialized.current = true;
+    const stored = getPromptResult();
+    if (stored?.prompt) setResult(stored);
+    else void generate();
+    return () => {
+      controller.current?.abort();
+      initialized.current = false;
+    };
+    // Language changes translate the interface, not the user's saved work.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    },
+    [],
+  );
 
-  // Switching language resets any in-progress edit to the new base text.
-  const switchLang = (lang: "local" | "en") => {
-    if (!result || lang === activeLang) return;
-    setActiveLang(lang);
-    const en = result.promptEnglish ?? result.prompt;
-    const loc = result.promptLocalized ?? "";
-    setEditedPrompt(lang === "en" ? en : loc || en);
-    setIsEditing(false);
-  };
-
-  // Open in AI: copy prompt to clipboard first (so the user can paste if the
-  // provider doesn't honor the prefill param), then open the chat in a new tab.
-  const handleOpenIn = async (target: AiTarget) => {
-    if (!result) return;
-    const text = currentText();
+  async function copy() {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(current);
+      notify(cs ? "Prompt zkopírován." : "Prompt copied.");
     } catch {
-      // Clipboard may be unavailable (permissions / insecure context) — the
-      // deep-link still opens, so the user isn't blocked.
+      setError(
+        cs
+          ? "Kopírování není dostupné. Označ text a zkopíruj ho ručně."
+          : "Clipboard unavailable. Select the text and copy it manually.",
+      );
     }
-    window.open(target.buildUrl(text), "_blank", "noopener,noreferrer");
-    setOpenedTarget(target.id);
-    setTimeout(() => setOpenedTarget(null), 5000);
-  };
-
-  // Refine: send the current prompt + the user's feedback back to the model and
-  // replace the result with the improved version (iteration, not regeneration).
-  const handleRefine = async () => {
-    if (!result || !feedback.trim() || refineLoading) return;
-    setRefineLoading(true);
-    setRefineError(false);
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refinePrompt: currentText(), feedback: feedback.trim(), lang }),
-      });
-      if (!res.ok) throw new Error("refine failed");
-      const data: PromptResult = await res.json();
-      setResult(data);
-      savePromptResult(data);
-      addEntry({ inputs: getWizardInputs(), result: data });
-      window.dispatchEvent(new Event("history-updated"));
-      setActiveLang("local");
-      setEditedPrompt(data.prompt);
-      setIsEditing(false);
-      setFeedback("");
-      setShowRefine(false);
-    } catch {
-      setRefineError(true);
-    } finally {
-      setRefineLoading(false);
-    }
-  };
-
-  // No result yet → either streaming a fresh prompt, redirecting, or errored.
-  if (!result) {
-    return (
-      <div className="bg-gradient-main flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-1 pt-24 pb-16 px-6">
-          <div className="max-w-3xl mx-auto">
-            {genError ? (
-              <div className="text-center py-20 fade-in">
-                <p className="text-red-400 mb-4">
-                  {t("result.error")}
-                </p>
-                <button
-                  onClick={() => {
-                    const i = getWizardInputs();
-                    if (i.goal) runStream(i);
-                  }}
-                  className="btn-secondary text-sm"
-                >
-                  {t("result.tryAgain")}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-baseline gap-3 mb-6">
-                  <h1 className="text-3xl font-bold tracking-tight">{t("result.title")}</h1>
-                  <span className="text-emerald-400/70 text-sm loading-dots">{t("result.building")}</span>
-                </div>
-                <div className="glass-card-bright p-6 min-h-[300px]">
-                  <pre className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                    {streamedText}
-                    {streaming && <span className="animate-pulse">▋</span>}
-                  </pre>
-                </div>
-              </>
-            )}
-          </div>
-        </main>
-        <Footer />
-      </div>
+  }
+  function saveEdit() {
+    if (!result || !draft.trim()) return;
+    setPrevious(result);
+    persist(applyPromptEdit(result, draft.trim(), version));
+    setEditing(false);
+    notify(cs ? "Změny uloženy." : "Changes saved.");
+  }
+  function download() {
+    const url = URL.createObjectURL(
+      new Blob([current], { type: "text/plain;charset=utf-8" }),
     );
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "makebetterprompt.txt";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const model = result?.recommendedModel || "Claude";
+  const provider = /gpt|openai/i.test(model)
+    ? { name: "ChatGPT", url: "https://chatgpt.com/" }
+    : /gemini|google/i.test(model)
+      ? { name: "Gemini", url: "https://gemini.google.com/app" }
+      : { name: "Claude", url: "https://claude.ai/new" };
+  async function openAI() {
+    const tab = window.open(provider.url, "_blank");
+    if (tab) tab.opener = null;
+    try {
+      await navigator.clipboard.writeText(current);
+      notify(
+        cs
+          ? "Zkopírováno. Vlož prompt do nové konverzace."
+          : "Copied. Paste your prompt into the new conversation.",
+      );
+    } catch {
+      notify(
+        cs
+          ? "AI otevřena. Prompt zkopíruj ručně."
+          : "AI opened. Please copy the prompt manually.",
+      );
+    }
   }
 
-  const promptEnglish = result.promptEnglish ?? result.prompt;
-  const promptLocalized = result.promptLocalized ?? "";
-  const isBilingual = !!promptLocalized && promptLocalized !== promptEnglish;
-
-  const recommendedId = targetIdForModel(result.recommendedModel);
-  const recommendedTarget = recommendedId ? getTarget(recommendedId) : null;
-  const otherTargets = AI_TARGETS.filter((tgt) => tgt.id !== recommendedId);
-
   return (
-    <div className="bg-gradient-main flex flex-col min-h-screen">
+    <>
       <Header />
-      <main className="flex-1 pt-24 pb-16 px-6">
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-3xl font-bold tracking-tight mb-6">
-            {t("result.title")}
-          </h1>
-
-          {/* Language tabs — only when we have a localized + English version */}
-          {isBilingual && (
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <button
-                onClick={() => switchLang("local")}
-                aria-pressed={activeLang === "local"}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  activeLang === "local"
-                    ? "bg-emerald-500 text-black"
-                    : "bg-white/5 text-white/60 hover:text-white"
-                }`}
-              >
-                {languageLabel(result.detectedLanguage)}
-              </button>
-              <button
-                onClick={() => switchLang("en")}
-                aria-pressed={activeLang === "en"}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  activeLang === "en"
-                    ? "bg-emerald-500 text-black"
-                    : "bg-white/5 text-white/60 hover:text-white"
-                }`}
-              >
-                English
-              </button>
-              {activeLang !== "en" && (
-                <span className="text-white/40 text-xs ml-1">
-                  {t("result.langNudge")}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Prompt output */}
-          <div className="glass-card-bright p-6 mb-4">
-            {isEditing ? (
-              <textarea
-                className="w-full bg-transparent text-white/90 text-sm leading-relaxed outline-none resize-none min-h-[300px] font-mono"
-                value={editedPrompt}
-                onChange={(e) => setEditedPrompt(e.target.value)}
-                autoFocus
-              />
-            ) : (
-              <pre className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                {activeBaseText()}
-              </pre>
-            )}
+      <main className="workspace" id="main-content">
+        <div className="workspace-head">
+          <div>
+            <span className="eyebrow">
+              {cs
+                ? "TVŮJ NÁPAD, O NĚCO JASNĚJŠÍ"
+                : "YOUR IDEA, A LITTLE CLEARER"}
+            </span>
+            <h1>
+              {cs ? "Teď z toho něco vytvoř." : "Now make something good."}
+            </h1>
+            <p>
+              {cs
+                ? "Prompt je tvůj. Uprav ho, dolaď a vezmi do své AI."
+                : "It’s your prompt. Edit it, refine it, and take it to your AI."}
+            </p>
           </div>
-
-          {/* Actions */}
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <button onClick={handleCopy} aria-label="Copy prompt to clipboard" className="btn-primary text-sm">
-              {copied ? t("result.copied") : t("result.copy")}
-            </button>
-            <button onClick={handleEdit} aria-label={isEditing ? "Finish editing" : "Edit prompt"} className="btn-secondary text-sm">
-              {isEditing ? t("result.editDone") : t("result.edit")}
-            </button>
-            <button
-              onClick={() => {
-                setShowRefine((v) => !v);
-                setRefineError(false);
-              }}
-              aria-label={showRefine ? "Cancel refine" : "Refine prompt"}
-              className="btn-secondary text-sm"
-            >
-              {showRefine ? t("result.cancel") : t("result.refine")}
-            </button>
-            <Link href="/" className="btn-ghost text-sm">
-              {t("result.home")}
+          <Link href="/builder" className="button button-ghost button-small">
+            <Icon name="plus" size={15} />
+            {cs ? "Nový prompt" : "New prompt"}
+          </Link>
+        </div>
+        {missing ? (
+          <div className="panel empty-state">
+            <BrandMark />
+            <h2>{cs ? "Začneme nápadem." : "Let’s start with an idea."}</h2>
+            <p>
+              {cs
+                ? "Ještě tu není žádný prompt. Napiš, co chceš vytvořit."
+                : "There’s no prompt here yet. Tell us what you’d like to create."}
+            </p>
+            <Link href="/builder" className="button button-primary">
+              {cs ? "Vytvořit prompt" : "Create a prompt"}
+              <Icon name="arrow" />
             </Link>
           </div>
-
-          {/* Refine panel — iterate on the prompt with natural-language feedback */}
-          {showRefine && (
-            <div className="glass-card p-5 mb-10 fade-in">
-              <label
-                htmlFor="refine-feedback"
-                className="block text-emerald-400 text-xs font-medium tracking-wider mb-2"
-              >
-                {t("result.refineLabel")}
-              </label>
-              <textarea
-                id="refine-feedback"
-                className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white/90 text-sm outline-none resize-none min-h-[80px] focus:border-emerald-400/40 transition-colors"
-                placeholder={t("result.refinePlaceholder")}
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                disabled={refineLoading}
-                autoFocus
-              />
-              <div className="flex items-center gap-3 mt-3">
+        ) : (
+          <>
+            {error && (
+              <div className="notice" role="alert">
+                <p className="error-message">{error}</p>
                 <button
-                  onClick={handleRefine}
-                  disabled={!feedback.trim() || refineLoading}
-                  className="btn-primary text-sm"
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() =>
+                    void generate(
+                      result && feedback
+                        ? { prompt: current, feedback }
+                        : undefined,
+                      result,
+                    )
+                  }
                 >
-                  {refineLoading ? t("result.refining") : t("result.regenerate")}
+                  {cs ? "Zkusit znovu" : "Try again"}
+                  <Icon name="undo" size={14} />
                 </button>
-                {refineError && (
-                  <span className="text-red-400 text-xs">{t("result.refineFailed")}</span>
+              </div>
+            )}
+            <div className="result-grid">
+              <div>
+                <section
+                  className="panel result-card"
+                  aria-busy={busy}
+                  aria-label={cs ? "Vygenerovaný prompt" : "Generated prompt"}
+                >
+                  <div className="result-toolbar">
+                    <div>
+                      <span className="status-dot" />
+                      <span className="mono-label">
+                        {busy
+                          ? cs
+                            ? "TVŮJ PROMPT VZNIKÁ"
+                            : "BRINGING IT INTO FOCUS"
+                          : cs
+                            ? "TVŮJ PROMPT"
+                            : "YOUR PROMPT"}
+                      </span>
+                    </div>
+                    <div>
+                      {result &&
+                        result.detectedLanguage !== "en" &&
+                        result.promptEnglish && (
+                          <>
+                            <button
+                              disabled={editing || busy}
+                              onClick={() => setVersion("local")}
+                              className={version === "local" ? "active" : ""}
+                              aria-pressed={version === "local"}
+                            >
+                              {result.detectedLanguage === "cs"
+                                ? "CZ"
+                                : (
+                                    result.detectedLanguage || "local"
+                                  ).toUpperCase()}
+                            </button>
+                            <button
+                              disabled={editing || busy}
+                              onClick={() => setVersion("en")}
+                              className={version === "en" ? "active" : ""}
+                              aria-pressed={version === "en"}
+                            >
+                              EN
+                            </button>
+                          </>
+                        )}
+                      <button
+                        className="icon-button"
+                        disabled={!result || busy || editing}
+                        onClick={() => {
+                          setDraft(current);
+                          setEditing(true);
+                        }}
+                        aria-label={cs ? "Upravit prompt" : "Edit prompt"}
+                      >
+                        <Icon name="edit" size={15} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        disabled={!result || busy || editing}
+                        onClick={download}
+                        aria-label={cs ? "Stáhnout prompt" : "Download prompt"}
+                      >
+                        <Icon name="download" size={15} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        disabled={!result || busy || editing}
+                        onClick={copy}
+                        aria-label={
+                          cs ? "Zkopírovat prompt" : "Copy prompt to clipboard"
+                        }
+                      >
+                        <Icon name="copy" size={15} />
+                      </button>
+                    </div>
+                  </div>
+                  {!current && busy ? (
+                    <div className="loading-state" role="status">
+                      <div className="loading-mark">
+                        <BrandMark />
+                      </div>
+                      <h3>
+                        {cs
+                          ? "Dáváme tvému nápadu směr."
+                          : "Giving your idea some direction."}
+                      </h3>
+                      <p>
+                        {cs
+                          ? "Hledáme správná slova, kontext a strukturu…"
+                          : "Finding the right words, context, and structure…"}
+                      </p>
+                      <div className="loading-bars">
+                        <i />
+                        <i />
+                        <i />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="result-body">
+                      {editing ? (
+                        <>
+                          <label className="sr-only" htmlFor="prompt-editor">
+                            {cs ? "Upravit prompt" : "Edit prompt"}
+                          </label>
+                          <textarea
+                            id="prompt-editor"
+                            className="result-editor"
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            maxLength={30000}
+                          />
+                          <p className="field-hint">
+                            {cs
+                              ? "Změny se ukládají do této jazykové verze."
+                              : "Edits are saved to this language version."}
+                          </p>
+                        </>
+                      ) : (
+                        <PromptText text={current} />
+                      )}
+                    </div>
+                  )}
+                  <div className="result-bottom">
+                    <span>
+                      {cs
+                        ? "Vytvořeno s AI. Před použitím zkontroluj."
+                        : "AI-assisted. Review before you use it."}
+                    </span>
+                    {editing ? (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          className="text-button"
+                          onClick={() => setEditing(false)}
+                        >
+                          {cs ? "Zrušit" : "Cancel"}
+                        </button>
+                        <button
+                          className="button button-primary button-small"
+                          onClick={saveEdit}
+                          disabled={!draft.trim()}
+                        >
+                          <Icon name="check" size={14} />
+                          {cs ? "Uložit" : "Save"}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="button button-primary button-small"
+                        disabled={!result || busy}
+                        onClick={copy}
+                      >
+                        <Icon name="copy" size={14} />
+                        {cs ? "Zkopírovat" : "Copy prompt"}
+                      </button>
+                    )}
+                  </div>
+                </section>
+                {result && (
+                  <section className="panel refine-section">
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 12,
+                      }}
+                    >
+                      <h3>
+                        {cs ? "Ještě ne úplně ono?" : "Not quite there yet?"}
+                      </h3>
+                      {previous && (
+                        <button
+                          className="text-button"
+                          disabled={busy || editing}
+                          onClick={() => {
+                            persist(previous);
+                            setPrevious(null);
+                          }}
+                        >
+                          <Icon name="undo" size={13} />
+                          {cs ? "Vrátit" : "Undo"}
+                        </button>
+                      )}
+                    </div>
+                    <p>
+                      {cs
+                        ? "Drobná změna může udělat velký rozdíl."
+                        : "A small adjustment can make all the difference."}
+                    </p>
+                    <div className="refine-chips">
+                      {(cs
+                        ? [
+                            "Stručněji",
+                            "Přirozenější tón",
+                            "Konkrétnější výstup",
+                          ]
+                        : [
+                            "Make it shorter",
+                            "More conversational",
+                            "More specific output",
+                          ]
+                      ).map((f) => (
+                        <button
+                          key={f}
+                          disabled={busy || editing}
+                          onClick={() => {
+                            setFeedback(f);
+                            void generate(
+                              { prompt: current, feedback: f },
+                              result,
+                            );
+                          }}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                    <form
+                      className="refine-form"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (feedback.trim())
+                          void generate({ prompt: current, feedback }, result);
+                      }}
+                    >
+                      <label className="sr-only" htmlFor="refine-input">
+                        {cs ? "Co změnit?" : "What should change?"}
+                      </label>
+                      <input
+                        id="refine-input"
+                        className="field-input"
+                        placeholder={
+                          cs
+                            ? "Co bys chtěl změnit?"
+                            : "What would you like to change?"
+                        }
+                        value={feedback}
+                        maxLength={1000}
+                        disabled={busy || editing}
+                        onChange={(e) => setFeedback(e.target.value)}
+                      />
+                      <button
+                        className="button button-secondary"
+                        disabled={busy || editing || !feedback.trim()}
+                        type="submit"
+                        aria-label={cs ? "Vylepšit prompt" : "Refine prompt"}
+                      >
+                        <Icon name="arrow" size={17} />
+                      </button>
+                    </form>
+                    {busy && (
+                      <p role="status">
+                        {cs ? "Upravuji prompt…" : "Refining your prompt…"}
+                      </p>
+                    )}
+                  </section>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Assumptions — what the model inferred for anything unspecified */}
-          {result.assumptions && result.assumptions.length > 0 && (
-            <div className="glass-card p-5 mb-10">
-              <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-3">
-                {t("result.assumptions")}
-              </h3>
-              <ul className="space-y-1.5">
-                {result.assumptions.map((a, i) => (
-                  <li key={i} className="text-white/70 text-sm flex gap-2">
-                    <span className="text-emerald-400/60">•</span>
-                    <span>{a}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-white/40 text-xs mt-3">
-                {t("result.assumptionsHintPre")}{" "}
-                <span className="text-emerald-400">{t("result.refine")}</span>{" "}
-                {t("result.assumptionsHintPost")}
-              </p>
-            </div>
-          )}
-
-          {/* Recommendations */}
-          <div>
-            <h2 className="text-xl font-bold tracking-tight mb-4">
-              {t("result.recommendations")}
-            </h2>
-            <div className="glass-card p-6 space-y-4">
-              <div>
-                <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-1">
-                  {t("result.recommendedModel")}
-                </h3>
-                <p className="text-lg font-bold">{result.recommendedModel}</p>
-              </div>
-              <div>
-                <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-1">
-                  {t("result.whyModel")}
-                </h3>
-                <p className="text-white/70 text-sm">{result.whyThisModel}</p>
-              </div>
-
-              {/* Open in AI — fuses model matching with one-click insert */}
-              <div className="pt-4 border-t border-white/10">
-                <h3 className="text-emerald-400 text-xs font-medium tracking-wider mb-3">
-                  {t("result.openWith")}
-                </h3>
-                <div className="flex flex-wrap items-center gap-3">
-                  {recommendedTarget && (
-                    <button
-                      onClick={() => handleOpenIn(recommendedTarget)}
-                      aria-label={`Open prompt in ${recommendedTarget.label}`}
-                      className="btn-primary text-sm"
-                    >
-                      {t("result.openIn", { model: recommendedTarget.label })}
-                    </button>
-                  )}
-                  {(recommendedTarget ? otherTargets : AI_TARGETS).map((tgt) => (
-                    <button
-                      key={tgt.id}
-                      onClick={() => handleOpenIn(tgt)}
-                      aria-label={`Open prompt in ${tgt.label}`}
-                      className="btn-secondary text-sm"
-                    >
-                      {tgt.label}
-                    </button>
-                  ))}
+              <aside className="result-sidebar">
+                <section className="panel">
+                  <span className="model-badge">
+                    <Icon name="spark" size={14} />
+                    {cs ? "DOPORUČENÝ NÁSTROJ" : "A SUGGESTED STARTING POINT"}
+                  </span>
+                  <h2 className="model-title">
+                    {result ? provider.name : "—"}
+                  </h2>
+                  <p className="model-reason">
+                    {result?.whyThisModel ||
+                      (cs
+                        ? "Doporučení se zobrazí společně s výsledkem."
+                        : "Your suggestion will appear with the finished prompt.")}
+                  </p>
+                  <button
+                    className="button button-secondary model-action"
+                    disabled={!result || busy || editing}
+                    onClick={openAI}
+                  >
+                    {cs
+                      ? `Použít v ${provider.name}`
+                      : `Use in ${provider.name}`}
+                    <Icon name="up-right" size={16} />
+                  </button>
+                  <p className="side-caption">
+                    {cs
+                      ? "Zkopíruje prompt a otevře AI. V nové konverzaci ho vlož. Může být potřeba účet."
+                      : "Copies your prompt and opens the AI. Paste it into a new chat. An account may be required."}
+                  </p>
+                </section>
+                {!!result?.assumptions?.length && (
+                  <details className="panel">
+                    <summary>
+                      {cs ? "Co jsme předpokládali" : "What we assumed"}
+                      <Icon name="chevron" size={16} />
+                    </summary>
+                    <ul>
+                      {result.assumptions.map((a) => (
+                        <li key={a}>{a}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                <div className="panel">
+                  <Icon name="clock" size={18} />
+                  <p className="side-caption">
+                    {cs
+                      ? "Prompty najdeš v historii tohoto prohlížeče. Důležité prompty si raději stáhni."
+                      : "Your prompts live in this browser’s history. Download anything you’d like to keep."}
+                  </p>
+                  <Link href="/history" className="text-button">
+                    {cs ? "Otevřít historii" : "Your prompt history"}
+                    <Icon name="arrow" size={14} />
+                  </Link>
                 </div>
-                <p className="text-white/40 text-xs mt-3">
-                  {openedTarget
-                    ? t("result.openHintCopied")
-                    : t("result.openHintIdle")}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold mb-2">{t("result.alternatives")}</h3>
-                <ul className="space-y-1">
-                  {result.alternatives.map((alt) => (
-                    <li key={alt} className="text-white/60 text-sm">
-                      • {alt}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              </aside>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </main>
       <Footer />
-    </div>
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
+    </>
   );
 }

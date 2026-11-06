@@ -8,11 +8,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  AI_TARGETS,
-  getTarget,
-  targetIdForModel,
-} from "../app/lib/aiTargets";
+import { AI_TARGETS, getTarget, targetIdForModel } from "../app/lib/aiTargets";
 
 describe("targetIdForModel", () => {
   it("maps Claude phrasings", () => {
@@ -32,8 +28,12 @@ describe("targetIdForModel", () => {
   });
 
   it("handles descriptive recommendations with parentheses", () => {
-    expect(targetIdForModel("ChatGPT (great for creative/marketing tasks)")).toBe("chatgpt");
-    expect(targetIdForModel("Gemini (great for research/data tasks)")).toBe("gemini");
+    expect(
+      targetIdForModel("ChatGPT (great for creative/marketing tasks)"),
+    ).toBe("chatgpt");
+    expect(targetIdForModel("Gemini (great for research/data tasks)")).toBe(
+      "gemini",
+    );
   });
 
   it("returns null for unknown / empty input", () => {

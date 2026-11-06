@@ -490,3 +490,4 @@ describe("Structural Quality Guarantees", () => {
     expect(enriched).toContain("generic advice");
   });
 });
+
